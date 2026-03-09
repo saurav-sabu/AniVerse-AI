@@ -10,3 +10,7 @@ wheels/
 .venv
 anienv/
 .env
+
+experiments/
+chroma_db/
+logs/
