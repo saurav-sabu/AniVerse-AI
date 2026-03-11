@@ -24,8 +24,15 @@ Base = declarative_base()
 
 # Dependency to get db session
 def get_db():
+    from backend.utils.logger import get_logger
+    logger = get_logger(__name__)
+    logger.info("get_db: Initializing session")
     db = SessionLocal()
     try:
         yield db
+    except Exception as e:
+        logger.error(f"get_db: Session error: {e}")
+        raise
     finally:
+        logger.info("get_db: Closing session")
         db.close()
