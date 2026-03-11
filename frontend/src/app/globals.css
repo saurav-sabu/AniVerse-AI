@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-pink: #FF3366;
+  --color-brand-purple: #B333FF;
+  --color-brand-magenta: #FF66CC;
+  
+  --background-image-gradient: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  --background-image-glass: radial-gradient(circle at 50% 50%, rgba(255, 51, 102, 0.05) 0%, transparent 50%);
+}
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --card: rgba(30, 33, 41, 0.7);
+  --border: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  background: var(--background);
+  background-image: var(--background-image-gradient), var(--background-image-glass);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+}
+
+/* Premium Gradients */
+.text-gradient {
+  background: linear-gradient(45deg, #FF3366, #FF66CC, #B333FF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-gradient-brand {
+  background: linear-gradient(45deg, #FF3366, #B333FF);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

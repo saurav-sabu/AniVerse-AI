@@ -1,0 +1,13 @@
+from pydantic import BaseModel
+from typing import List, Optional
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+class RecommendRequest(BaseModel):
+    query: str
+    history: Optional[List[ChatMessage]] = None
+
+class RecommendResponse(BaseModel):
+    response: str
