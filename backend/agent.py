@@ -2,6 +2,7 @@ import os
 from langchain_groq import ChatGroq
 from langgraph.prebuilt import create_react_agent
 from backend.tools.tmdb_tool import search_tmdb_movies, get_movie_watch_providers, get_movie_reviews
+from backend.tools.journal_tool import add_to_journal
 from backend.utils.prompts import get_movie_expert_prompt
 from backend.utils.logger import get_logger
 from dotenv import load_dotenv
@@ -14,12 +15,17 @@ def initialize_agent():
     Initializes and returns the CineSync AI agent using create_react_agent.
     """
     try:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            logger.error("GROQ_API_KEY not found in environment")
+        
         llm = ChatGroq(
             model="qwen/qwen3-32b",
+            api_key=api_key,
             temperature=0.3
         )
         
-        tools = [search_tmdb_movies, get_movie_watch_providers, get_movie_reviews]
+        tools = [search_tmdb_movies, get_movie_watch_providers, get_movie_reviews, add_to_journal]
         system_prompt = get_movie_expert_prompt()
         
         # create_react_agent uses 'prompt' in this version
@@ -31,10 +37,11 @@ def initialize_agent():
         logger.error(f"Failed to initialize agent: {e}")
         raise
 
-def get_movie_recommendation(user_query: str, history: list = None):
+def get_movie_recommendation(user_query: str, history: list = None, user_context: dict = None):
     """
     Functional entry point to get a recommendation from the agent.
     Accepts an optional 'history' list of (role, content) tuples.
+    'user_context' can include email for tool usage.
     """
     agent = initialize_agent()
     logger.info(f"Processing query through agent: {user_query}")
@@ -46,6 +53,10 @@ def get_movie_recommendation(user_query: str, history: list = None):
             for role, content in history:
                 messages.append((role, content))
         
+        # Add user context to the first system message or a separate note
+        if user_context and 'email' in user_context:
+            user_query = f"[User Context: {user_context['email']}]\n\n" + user_query
+            
         # Add the current user query
         messages.append(("user", user_query))
         

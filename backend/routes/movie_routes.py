@@ -11,7 +11,7 @@ async def fetch_trailer(tmdb_id: int, current_user: dict = Depends(get_current_u
     """
     try:
         # Use .invoke() for the StructuredTool
-        trailer_key = get_movie_trailer.invoke({"movie_id": tmdb_id})
+        trailer_key = get_movie_trailer(movie_id=tmdb_id)
         if "Error" in trailer_key or "No official trailer" in trailer_key:
             raise HTTPException(status_code=404, detail=trailer_key)
         return {"key": trailer_key}

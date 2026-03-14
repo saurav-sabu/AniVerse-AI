@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, Plus, Check, Mic, MicOff, Play, X, Archive, Share2, Radar } from 'lucide-react';
 import Link from 'next/link';
-import { getRecommendation, Message, getAuthToken, logout, addToWatchlist, removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, getPersona } from '@/lib/api';
+import { getRecommendation, Message, getAuthToken, logout, addToWatchlist, removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, getPersona, getTMDBImageUrl } from '@/lib/api';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { clsx, type ClassValue } from 'clsx';
@@ -12,6 +12,9 @@ import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
 import { PersonaCard } from '@/components/PersonaCard';
 import VibeRadar from '@/components/VibeRadar';
+import { JournalDrawer } from '@/components/JournalDrawer';
+import { Book, HelpCircle } from 'lucide-react';
+import { OnboardingTour } from '@/components/OnboardingTour';
 
 // Helper for tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -29,11 +32,13 @@ const MovieCard = ({
   movie, 
   isWatched, 
   onToggleWatchlist,
+  onMarkWatched,
   onPlayTrailer 
 }: { 
   movie: MovieMetadata, 
   isWatched?: boolean, 
   onToggleWatchlist?: () => void,
+  onMarkWatched?: () => void,
   onPlayTrailer?: () => void
 }) => {
   const [isAdding, setIsAdding] = useState(false);
@@ -57,7 +62,7 @@ const MovieCard = ({
       <div className="aspect-[2/3] w-full overflow-hidden bg-white/5 relative">
         {movie.poster && movie.poster !== "None" && movie.poster !== "null" ? (
           <img
-            src={movie.poster}
+            src={getTMDBImageUrl(movie.poster)}
             alt={movie.title}
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
             loading="lazy"
@@ -92,6 +97,15 @@ const MovieCard = ({
         >
           {isWatched ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
         </button>
+
+        {/* Mark as Watched Button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onMarkWatched?.(); }}
+          className="absolute top-2 left-2 z-20 p-1.5 rounded-lg border border-white/20 bg-black/50 text-white/70 hover:border-brand-purple hover:bg-brand-purple hover:text-white backdrop-blur-md transition-all duration-300 opacity-0 group-hover:opacity-100"
+          title="Mark as Watched"
+        >
+          <Book className="w-4 h-4" />
+        </button>
       </div>
       <div className="p-2 bg-black/40 backdrop-blur-md border-t border-white/5 text-center">
         <h3 className="line-clamp-1 text-[10px] sm:text-[11px] font-black text-white/80 group-hover:text-brand-pink transition-colors uppercase tracking-tight">
@@ -111,12 +125,14 @@ const VaultDrawer = ({
   onClose, 
   movies, 
   onRemove,
+  onMarkWatched,
   onPlayTrailer 
 }: { 
   isOpen: boolean, 
   onClose: () => void, 
   movies: any[], 
   onRemove: (movie: any) => void,
+  onMarkWatched: (movie: any) => void,
   onPlayTrailer: (movie: any) => void
 }) => {
   return (
@@ -171,7 +187,7 @@ const VaultDrawer = ({
                       className="group relative aspect-[2/3] rounded-2xl overflow-hidden border border-white/5 hover:border-brand-pink/50 transition-colors"
                     >
                       <Image 
-                        src={movie.poster_path} 
+                        src={getTMDBImageUrl(movie.poster_path)} 
                         alt={movie.title}
                         fill
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -185,13 +201,21 @@ const VaultDrawer = ({
                         >
                           <Play className="w-4 h-4 fill-current" />
                         </button>
-                        <button 
-                          onClick={() => onRemove(movie)}
-                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-red-500/20 text-white/70 hover:text-white border border-white/10 transition-colors text-xs font-bold"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Remove
-                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => onMarkWatched(movie)}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-brand-purple/20 text-white/70 hover:text-white border border-white/10 transition-colors text-xs font-bold"
+                          >
+                            <Book className="w-3 h-3" />
+                            Watched
+                          </button>
+                          <button 
+                            onClick={() => onRemove(movie)}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-red-500/20 text-white/70 hover:text-white border border-white/10 transition-colors text-xs font-bold"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="absolute bottom-0 left-0 right-0 p-3 bg-black/60 backdrop-blur-md border-t border-white/5">
@@ -220,7 +244,7 @@ const MoodBar = ({ onMoodSelect }: { onMoodSelect: (mood: any) => void }) => {
   ];
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar -mx-2 px-2 mb-4">
+    <div id="tour-moodbar" className="flex gap-2 overflow-x-auto pb-4 no-scrollbar -mx-2 px-2 mb-4">
       {moods.map((mood) => (
         <button
           key={mood.label}
@@ -252,6 +276,8 @@ export default function Home() {
   const [isPersonaCardOpen, setIsPersonaCardOpen] = useState(false);
   const [themeColor, setThemeColor] = useState('#ec4899'); // Default pink
   const [isRadarOpen, setIsRadarOpen] = useState(false);
+  const [isJournalOpen, setIsJournalOpen] = useState(false);
+  const [showTour, setShowTour] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -264,6 +290,12 @@ export default function Home() {
       setIsAuthenticated(true);
       fetchWatchlist();
       fetchPersona();
+      
+      // Check for tour
+      const tourCompleted = localStorage.getItem('cinesync_tour_completed');
+      if (!tourCompleted) {
+        setShowTour(true);
+      }
     }
   }, [router]);
 
@@ -283,6 +315,30 @@ export default function Home() {
       fetchPersona(); // Refresh persona when watchlist changes
     } catch (e) {
       console.error("Failed to fetch watchlist", e);
+    }
+  };
+
+  const handleMarkWatched = async (movie: any) => {
+    try {
+      const tmdb_id = String(movie.id || movie.tmdb_id);
+      const title = movie.title;
+      const poster_path = movie.poster || movie.poster_path;
+
+      if (!tmdb_id || !title || !poster_path) {
+        console.error("Missing required fields for journaling", { tmdb_id, title, poster_path });
+        return;
+      }
+
+      await addToHistory(tmdb_id, title, poster_path);
+      // Optional: remove from watchlist when marked as watched
+      if (watchlist.some(m => String(m.tmdb_id) === tmdb_id)) {
+        await removeFromWatchlist(tmdb_id);
+        setWatchlist(prev => prev.filter(m => String(m.tmdb_id) !== tmdb_id));
+      }
+      setIsJournalOpen(true); // Open journal to show the new entry
+      fetchPersona(); // Refresh persona
+    } catch (e) {
+      console.error("Mark watched failed", e);
     }
   };
 
@@ -456,6 +512,7 @@ export default function Home() {
                 movie={movie} 
                 isWatched={watchlist.some(m => m.tmdb_id === movie.id)}
                 onToggleWatchlist={() => toggleWatchlist(movie)}
+                onMarkWatched={() => handleMarkWatched(movie)}
                 onPlayTrailer={() => handlePlayTrailer(movie)}
               />
             ))}
@@ -502,6 +559,7 @@ export default function Home() {
       {/* Header */}
       <header className="z-30 flex items-center justify-between px-6 py-4 glass border-b border-white/10">
         <motion.div
+          id="tour-header"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="flex items-center gap-3"
@@ -518,6 +576,7 @@ export default function Home() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="hidden lg:flex items-center gap-2 pr-1 pl-3 py-1 rounded-full bg-white/5 border border-white/10 group/persona cursor-pointer hover:bg-white/10 transition-colors"
+              id="tour-persona"
               onClick={() => setIsPersonaCardOpen(true)}
               title="Share your cinematic identity"
             >
@@ -530,6 +589,7 @@ export default function Home() {
           )}
 
           <button
+            id="tour-vault"
             onClick={() => setIsVaultOpen(true)}
             className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-pink/50 hover:bg-brand-pink/5"
             title="Open Cinema Vault"
@@ -561,6 +621,7 @@ export default function Home() {
           <div className="h-6 w-[1px] bg-white/10 mx-1" />
 
           <button
+            id="tour-universe"
             onClick={() => setIsRadarOpen(true)}
             className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-purple/50 hover:bg-brand-purple/5"
             title="Explore Cinematic Universe"
@@ -572,6 +633,7 @@ export default function Home() {
           <div className="h-6 w-[1px] bg-white/10 mx-1" />
 
           <Link
+            id="tour-swipe"
             href="/swipe"
             className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-pink/50 hover:bg-brand-pink/5"
             title="Rapid Discovery"
@@ -579,6 +641,28 @@ export default function Home() {
             <Sparkles className="w-4 h-4 text-brand-pink" />
             <span className="text-sm font-bold hidden sm:inline">Swipe</span>
           </Link>
+
+          <div className="h-6 w-[1px] bg-white/10 mx-1" />
+
+          <button
+            id="tour-journal"
+            onClick={() => setIsJournalOpen(true)}
+            className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-purple/50 hover:bg-brand-purple/5"
+            title="AI Cinematic Journal"
+          >
+            <Book className="w-4 h-4 text-brand-purple" />
+            <span className="text-sm font-bold hidden sm:inline">Journal</span>
+          </button>
+          
+          <div className="h-6 w-[1px] bg-white/10 mx-1" />
+
+          <button
+            onClick={() => setShowTour(true)}
+            className="p-2.5 transition-all rounded-xl hover:bg-white/5 text-white/40 hover:text-white"
+            title="Start Tour"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
         </div>
       </header>
 
@@ -712,13 +796,14 @@ export default function Home() {
       </div>
 
       {/* Input Bar Section */}
-      <div className="relative z-30 w-full max-w-3xl px-4 pb-8 mt-auto mx-auto">
+      <div id="tour-input" className="relative z-30 w-full max-w-3xl px-4 pb-8 mt-auto mx-auto">
         <div className="glass-dark border border-white/10 rounded-[2rem] p-1.5 shadow-2xl backdrop-blur-3xl focus-within:border-brand-pink/40 transition-all duration-300">
           <form
             onSubmit={handleSubmit}
             className="relative flex items-center"
           >
             <button
+              id="tour-voice"
               type="button"
               onClick={toggleListening}
               className={cn(
@@ -780,8 +865,10 @@ export default function Home() {
         onClose={() => setIsVaultOpen(false)} 
         movies={watchlist}
         onRemove={(movie) => toggleWatchlist({ id: movie.tmdb_id, title: movie.title, poster: movie.poster_path } as any)}
+        onMarkWatched={(movie) => handleMarkWatched(movie)}
         onPlayTrailer={(movie) => handlePlayTrailer({ id: movie.id, title: movie.title } as any)}
       />
+
 
       <AnimatePresence>
         {isPersonaCardOpen && persona && (
@@ -805,6 +892,15 @@ export default function Home() {
           <VibeRadar onClose={() => setIsRadarOpen(false)} />
         )}
       </AnimatePresence>
+
+      <JournalDrawer isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} />
+      
+      {showTour && (
+        <OnboardingTour onComplete={() => {
+          setShowTour(false);
+          localStorage.setItem('cinesync_tour_completed', 'true');
+        }} />
+      )}
     </main>
   );
 }

@@ -22,7 +22,11 @@ async def recommend(request: RecommendRequest, current_user = Depends(get_curren
         if request.history:
             formatted_history = [(m.role, m.content) for m in request.history]
         
-        response = get_movie_recommendation(request.query, history=formatted_history)
+        response = get_movie_recommendation(
+            request.query, 
+            history=formatted_history,
+            user_context={"email": current_user.email}
+        )
         return {"response": response}
         
     except Exception as e:

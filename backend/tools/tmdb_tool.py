@@ -156,7 +156,6 @@ def get_movie_reviews(movie_id: int) -> str:
         logger.error(f"TMDB Reviews API failed: {e}")
         return f"Error fetching movie reviews: {str(e)}"
 
-@tool
 def get_movie_trailer(movie_id: int) -> str:
     """
     Get the YouTube video ID for the official trailer of a movie by its TMDB ID.
@@ -190,7 +189,6 @@ def get_movie_trailer(movie_id: int) -> str:
         logger.error(f"TMDB Videos API failed: {e}")
         return f"Error fetching movie trailer: {str(e)}"
 
-@tool
 def get_movie_details(movie_id: int) -> dict:
     """
     Get detailed information for a specific movie by its TMDB ID, including genres.

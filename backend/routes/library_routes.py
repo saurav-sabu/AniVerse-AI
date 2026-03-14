@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from backend.database import get_db
 from backend.models.library_model import Watchlist, History
-from backend.schemas.library_schema import LibraryCreate, LibraryResponse
+from backend.schemas.library_schema import LibraryCreate, LibraryResponse, HistoryUpdate
 from backend.auth.get_user import get_current_user
 from backend.models.user_model import User
 
@@ -53,12 +53,41 @@ def add_to_history(movie: LibraryCreate, current_user: User = Depends(get_curren
         user_id=current_user.id,
         tmdb_id=movie.tmdb_id,
         title=movie.title,
-        poster_path=movie.poster_path
+        poster_path=movie.poster_path,
+        rating=movie.rating,
+        notes=movie.notes
     )
     db.add(new_entry)
     db.commit()
     db.refresh(new_entry)
     return new_entry
+
+@router.patch("/history/{tmdb_id}", response_model=LibraryResponse)
+def update_history_entry(tmdb_id: str, update: HistoryUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    entry = db.query(History).filter(
+        History.user_id == current_user.id,
+        History.tmdb_id == tmdb_id
+    ).order_by(History.viewed_at.desc()).first()
+    
+    if not entry:
+        raise HTTPException(status_code=404, detail="Movie history entry not found")
+    
+    if update.rating is not None:
+        entry.rating = update.rating
+    if update.notes is not None:
+        entry.notes = update.notes
+        
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+from backend.utils.journal_analyzer import generate_journal_summary
+
+@router.get("/journal/summary")
+def get_journal_summary(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    history = db.query(History).filter(History.user_id == current_user.id).order_by(History.viewed_at.desc()).limit(10).all()
+    summary = generate_journal_summary(history)
+    return {"summary": summary}
 
 @router.get("/history", response_model=List[LibraryResponse])
 def get_history(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -87,7 +116,7 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
     # 3. Tally genres
     genre_tally = Counter()
     for mid in movie_ids:
-        details = get_movie_details.invoke({"movie_id": int(mid)})
+        details = get_movie_details(movie_id=int(mid))
         if "genres" in details:
             for g in details["genres"]:
                 genre_tally[g["name"]] += 1

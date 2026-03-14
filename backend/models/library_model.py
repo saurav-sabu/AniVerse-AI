@@ -20,4 +20,6 @@ class History(Base):
     tmdb_id = Column(String, nullable=False)
     title = Column(String, nullable=False)
     poster_path = Column(String)
+    rating = Column(Integer, nullable=True)
+    notes = Column(String, nullable=True)
     viewed_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -9,6 +9,17 @@ export interface RecommendResponse {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export function getTMDBImageUrl(path: string | null, size: 'w500' | 'original' = 'w500'): string {
+    if (!path) return "";
+    const cleanPath = path.trim();
+    if (cleanPath === "None" || cleanPath === "null" || cleanPath === "") return "";
+    if (cleanPath.toLowerCase().startsWith('http')) return cleanPath;
+    
+    const formattedPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+    const url = `https://image.tmdb.org/t/p/${size}${formattedPath}`;
+    return url;
+}
+
 export async function fetchWithError(endpoint: string, options: RequestInit = {}): Promise<any> {
     const token = getAuthToken();
     const headers: Record<string, string> = {
@@ -158,6 +169,22 @@ export async function addToHistory(tmdb_id: string, title: string, poster_path: 
         method: 'POST',
         body: JSON.stringify({ tmdb_id, title, poster_path }),
     });
+}
+
+export async function getHistory(): Promise<any[]> {
+    return fetchWithError('/library/history');
+}
+
+export async function updateHistoryEntry(tmdb_id: string, rating?: number, notes?: string): Promise<void> {
+    await fetchWithError(`/library/history/${tmdb_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ rating, notes }),
+    });
+}
+
+export async function getJournalSummary(): Promise<string> {
+    const data = await fetchWithError('/library/journal/summary');
+    return data.summary;
 }
 
 export async function getMovieTrailer(tmdb_id: string): Promise<string> {
