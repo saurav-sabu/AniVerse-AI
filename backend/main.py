@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database import engine, Base
-from backend.routes import auth_routes, recommendation_routes
+from backend.routes import auth_routes, recommendation_routes, library_routes, movie_routes
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -18,12 +18,7 @@ app = FastAPI(title="CineSync AI API")
 # Enable CORS for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,6 +27,8 @@ app.add_middleware(
 # Include Routers
 app.include_router(auth_routes.router)
 app.include_router(recommendation_routes.router)
+app.include_router(library_routes.router)
+app.include_router(movie_routes.router)
 
 @app.get("/health")
 async def health():

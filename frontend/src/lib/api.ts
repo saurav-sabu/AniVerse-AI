@@ -107,3 +107,87 @@ export async function getRecommendation(query: string, history: Message[]): Prom
         throw error;
     }
 }
+export async function addToWatchlist(tmdb_id: string, title: string, poster_path: string): Promise<void> {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/library/watchlist`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ tmdb_id, title, poster_path }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to add to watchlist');
+    }
+}
+
+export async function getWatchlist(): Promise<any[]> {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/library/watchlist`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch watchlist');
+    }
+    return response.json();
+}
+
+export async function removeFromWatchlist(tmdb_id: string): Promise<void> {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/library/watchlist/${tmdb_id}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to remove from watchlist');
+    }
+}
+
+export async function addToHistory(tmdb_id: string, title: string, poster_path: string): Promise<void> {
+    const token = getAuthToken();
+    await fetch(`${API_BASE_URL}/library/history`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ tmdb_id, title, poster_path }),
+    });
+}
+
+export async function getMovieTrailer(tmdb_id: string): Promise<string> {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/movies/trailer/${tmdb_id}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error('Trailer not found');
+    }
+    const data = await response.json();
+    return data.key;
+}
+
+export async function getPersona(): Promise<{ title: string, badge: string, desc: string }> {
+    const token = getAuthToken();
+    const response = await fetch(`${API_BASE_URL}/library/persona`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch persona');
+    }
+    return response.json();
+}

@@ -135,15 +135,79 @@ def get_movie_reviews(movie_id: int) -> str:
             return "No user reviews available for this movie."
 
         formatted_reviews = []
-        for review in results[:3]:  # Limit to top 3 reviews
-            author = review.get("author", "Anonymous")
-            content = review.get("content", "")
-            # Truncate long reviews for context efficiency
-            snippet = (content[:300] + '...') if len(content) > 300 else content
-            formatted_reviews.append(f"Review by {author}: \"{snippet}\"")
+        positive_keywords = ["great", "amazing", "masterpiece", "loved", "excellent", "best", "brilliant", "gripping"]
+        scores = []
 
-        return "\n\n".join(formatted_reviews)
+        for review in results[:3]:
+            content = review.get("content", "").lower()
+            # Basic sentiment scoring
+            pos_hits = sum(1 for word in positive_keywords if word in content)
+            scores.append(pos_hits)
+            
+            snippet = (review.get("content", "")[:300] + '...') if len(review.get("content", "")) > 300 else review.get("content", "")
+            formatted_reviews.append(f"Review: \"{snippet}\"")
+
+        avg_positivity = sum(scores) / len(scores) if scores else 0
+        vibe_score = "Highly Acclaimed" if avg_positivity > 2 else "Solid Vibe" if avg_positivity > 0.5 else "Mixed Reactions"
+
+        return f"Vibe Score: {vibe_score}\n\n" + "\n\n".join(formatted_reviews)
 
     except requests.exceptions.RequestException as e:
         logger.error(f"TMDB Reviews API failed: {e}")
         return f"Error fetching movie reviews: {str(e)}"
+
+@tool
+def get_movie_trailer(movie_id: int) -> str:
+    """
+    Get the YouTube video ID for the official trailer of a movie by its TMDB ID.
+    Returns the YouTube key (e.g., 'dQw4w9WgXcQ') or a message if none found.
+    """
+    if not TMDB_API_KEY:
+        return "Error: TMDB API key is missing."
+
+    logger.info(f"Fetching trailer for movie ID: {movie_id}")
+    
+    endpoint = f"{BASE_URL}/movie/{movie_id}/videos"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US"}
+
+    try:
+        response = requests.get(endpoint, params=params)
+        response.raise_for_status()
+        data = response.json()
+        
+        results = data.get("results", [])
+        # Look for "Trailer" of type "YouTube"
+        trailers = [r for r in results if r.get("site") == "YouTube" and (r.get("type") == "Trailer" or r.get("type") == "Teaser")]
+        
+        if not trailers:
+            return "No official trailer found on YouTube for this movie."
+
+        # Prefer "Trailer" over "Teaser"
+        official_trailer = next((t for t in trailers if t.get("type") == "Trailer"), trailers[0])
+        return official_trailer.get("key", "")
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"TMDB Videos API failed: {e}")
+        return f"Error fetching movie trailer: {str(e)}"
+
+@tool
+def get_movie_details(movie_id: int) -> dict:
+    """
+    Get detailed information for a specific movie by its TMDB ID, including genres.
+    Returns a dictionary of movie details.
+    """
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key is missing."}
+
+    logger.info(f"Fetching details for movie ID: {movie_id}")
+    
+    endpoint = f"{BASE_URL}/movie/{movie_id}"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US"}
+
+    try:
+        response = requests.get(endpoint, params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"TMDB Details API failed: {e}")
+        return {"error": str(e)}
