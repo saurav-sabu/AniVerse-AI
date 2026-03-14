@@ -130,3 +130,67 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
         "watchlist_count": len(watchlist),
         "history_count": len(history)
     }
+@router.get("/radar")
+async def get_radar_data(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    watchlist = db.query(Watchlist).filter(Watchlist.user_id == current_user.id).all()
+    history = db.query(History).filter(History.user_id == current_user.id).all()
+    
+    all_movies = []
+    seen_ids = set()
+    for m in watchlist + history:
+        if m.tmdb_id not in seen_ids:
+            all_movies.append(m)
+            seen_ids.add(m.tmdb_id)
+            
+    import math
+    import random
+    
+    nodes = []
+    for m in all_movies:
+        angle_deg = random.randint(0, 360)
+        radius = 50 + random.random() * 200
+        angle_rad = math.radians(angle_deg)
+        
+        nodes.append({
+            "id": m.tmdb_id,
+            "title": m.title,
+            "poster_path": m.poster_path,
+            "x": math.cos(angle_rad) * radius,
+            "y": math.sin(angle_rad) * radius,
+            "type": "watchlist" if any(x.tmdb_id == m.tmdb_id for x in watchlist) else "history"
+        })
+        
+    return {"nodes": nodes}
+
+@router.get("/swipe")
+async def get_swipe_deck(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    import requests
+    import os
+    
+    # 1. Get user library IDs
+    watchlist = db.query(Watchlist).filter(Watchlist.user_id == current_user.id).all()
+    history = db.query(History).filter(History.user_id == current_user.id).all()
+    user_movie_ids = {m.tmdb_id for m in watchlist + history}
+    
+    # 2. Fetch trending movies
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    endpoint = f"https://api.themoviedb.org/3/trending/movie/week"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US"}
+    
+    response = requests.get(endpoint, params=params)
+    response.raise_for_status()
+    trending = response.json().get("results", [])
+    
+    # 3. Filter and format
+    deck = []
+    for m in trending:
+        if str(m.get("id")) not in user_movie_ids:
+            deck.append({
+                "id": str(m.get("id")),
+                "title": m.get("title"),
+                "poster": f"https://image.tmdb.org/t/p/w500{m.get('poster_path')}" if m.get("poster_path") else None,
+                "overview": m.get("overview"),
+                "vote_average": m.get("vote_average")
+            })
+            
+    return {"deck": deck[:15]} # Return 15 fresh items

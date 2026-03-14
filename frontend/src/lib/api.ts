@@ -9,6 +9,35 @@ export interface RecommendResponse {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export async function fetchWithError(endpoint: string, options: RequestInit = {}): Promise<any> {
+    const token = getAuthToken();
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string>),
+    };
+
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers,
+    });
+
+    if (response.status === 401) {
+        logout();
+        throw new Error('Session expired');
+    }
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(error.detail || 'Request failed');
+    }
+
+    return response.json();
+}
+
 // Auth State Helper
 export const getAuthToken = () => {
     if (typeof window !== 'undefined') {
@@ -108,86 +137,34 @@ export async function getRecommendation(query: string, history: Message[]): Prom
     }
 }
 export async function addToWatchlist(tmdb_id: string, title: string, poster_path: string): Promise<void> {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/library/watchlist`, {
+    await fetchWithError('/library/watchlist', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({ tmdb_id, title, poster_path }),
     });
-
-    if (!response.ok) {
-        throw new Error('Failed to add to watchlist');
-    }
 }
 
 export async function getWatchlist(): Promise<any[]> {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/library/watchlist`, {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch watchlist');
-    }
-    return response.json();
+    return fetchWithError('/library/watchlist');
 }
 
 export async function removeFromWatchlist(tmdb_id: string): Promise<void> {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/library/watchlist/${tmdb_id}`, {
+    await fetchWithError(`/library/watchlist/${tmdb_id}`, {
         method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
     });
-
-    if (!response.ok) {
-        throw new Error('Failed to remove from watchlist');
-    }
 }
 
 export async function addToHistory(tmdb_id: string, title: string, poster_path: string): Promise<void> {
-    const token = getAuthToken();
-    await fetch(`${API_BASE_URL}/library/history`, {
+    await fetchWithError('/library/history', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
         body: JSON.stringify({ tmdb_id, title, poster_path }),
     });
 }
 
 export async function getMovieTrailer(tmdb_id: string): Promise<string> {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/movies/trailer/${tmdb_id}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error('Trailer not found');
-    }
-    const data = await response.json();
+    const data = await fetchWithError(`/movies/trailer/${tmdb_id}`);
     return data.key;
 }
 
 export async function getPersona(): Promise<{ title: string, badge: string, desc: string, watchlist_count: number, history_count: number }> {
-    const token = getAuthToken();
-    const response = await fetch(`${API_BASE_URL}/library/persona`, {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to fetch persona');
-    }
-    return response.json();
+    return fetchWithError('/library/persona');
 }

@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, Plus, Check, Mic, MicOff, Play, X, Archive, Share2 } from 'lucide-react';
+import { Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, Plus, Check, Mic, MicOff, Play, X, Archive, Share2, Radar } from 'lucide-react';
+import Link from 'next/link';
 import { getRecommendation, Message, getAuthToken, logout, addToWatchlist, removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, getPersona } from '@/lib/api';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -10,6 +11,7 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
 import { PersonaCard } from '@/components/PersonaCard';
+import VibeRadar from '@/components/VibeRadar';
 
 // Helper for tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -249,6 +251,7 @@ export default function Home() {
   const [persona, setPersona] = useState<{ title: string, badge: string, desc: string, watchlist_count: number, history_count: number } | null>(null);
   const [isPersonaCardOpen, setIsPersonaCardOpen] = useState(false);
   const [themeColor, setThemeColor] = useState('#ec4899'); // Default pink
+  const [isRadarOpen, setIsRadarOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -554,6 +557,28 @@ export default function Home() {
             <LogOut className="w-4 h-4 text-brand-pink" />
             <span className="text-sm font-bold">Logout</span>
           </button>
+
+          <div className="h-6 w-[1px] bg-white/10 mx-1" />
+
+          <button
+            onClick={() => setIsRadarOpen(true)}
+            className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-purple/50 hover:bg-brand-purple/5"
+            title="Explore Cinematic Universe"
+          >
+            <Radar className="w-4 h-4 text-brand-purple" />
+            <span className="text-sm font-bold hidden sm:inline">Universe</span>
+          </button>
+
+          <div className="h-6 w-[1px] bg-white/10 mx-1" />
+
+          <Link
+            href="/swipe"
+            className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-pink/50 hover:bg-brand-pink/5"
+            title="Rapid Discovery"
+          >
+            <Sparkles className="w-4 h-4 text-brand-pink" />
+            <span className="text-sm font-bold hidden sm:inline">Swipe</span>
+          </Link>
         </div>
       </header>
 
@@ -772,6 +797,12 @@ export default function Home() {
             }}
             onClose={() => setIsPersonaCardOpen(false)}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isRadarOpen && (
+          <VibeRadar onClose={() => setIsRadarOpen(false)} />
         )}
       </AnimatePresence>
     </main>
