@@ -125,4 +125,8 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
     
     persona = persona_map.get(top_genre, {"title": "Cinephile", "badge": "🍿", "desc": "A versatile lover of all things cinema."})
     
-    return persona
+    return {
+        **persona,
+        "watchlist_count": len(watchlist),
+        "history_count": len(history)
+    }

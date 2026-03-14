@@ -178,7 +178,7 @@ export async function getMovieTrailer(tmdb_id: string): Promise<string> {
     return data.key;
 }
 
-export async function getPersona(): Promise<{ title: string, badge: string, desc: string }> {
+export async function getPersona(): Promise<{ title: string, badge: string, desc: string, watchlist_count: number, history_count: number }> {
     const token = getAuthToken();
     const response = await fetch(`${API_BASE_URL}/library/persona`, {
         headers: {

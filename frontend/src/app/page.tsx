@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, Plus, Check, Mic, MicOff, Play, X, Archive } from 'lucide-react';
+import { Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, Plus, Check, Mic, MicOff, Play, X, Archive, Share2 } from 'lucide-react';
 import { getRecommendation, Message, getAuthToken, logout, addToWatchlist, removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, getPersona } from '@/lib/api';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ReactMarkdown from 'react-markdown';
+import { PersonaCard } from '@/components/PersonaCard';
 
 // Helper for tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -245,7 +246,8 @@ export default function Home() {
   const [selectedTrailer, setSelectedTrailer] = useState<MovieMetadata | null>(null);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [isVaultOpen, setIsVaultOpen] = useState(false);
-  const [persona, setPersona] = useState<{ title: string, badge: string, desc: string } | null>(null);
+  const [persona, setPersona] = useState<{ title: string, badge: string, desc: string, watchlist_count: number, history_count: number } | null>(null);
+  const [isPersonaCardOpen, setIsPersonaCardOpen] = useState(false);
   const [themeColor, setThemeColor] = useState('#ec4899'); // Default pink
   const scrollRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -512,11 +514,15 @@ export default function Home() {
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10"
-              title={persona.desc}
+              className="hidden lg:flex items-center gap-2 pr-1 pl-3 py-1 rounded-full bg-white/5 border border-white/10 group/persona cursor-pointer hover:bg-white/10 transition-colors"
+              onClick={() => setIsPersonaCardOpen(true)}
+              title="Share your cinematic identity"
             >
               <span className="text-lg">{persona.badge}</span>
               <span className="text-[10px] font-black uppercase tracking-wider text-white/60">{persona.title}</span>
+              <div className="p-1 rounded-full bg-brand-pink text-white scale-0 group-hover/persona:scale-100 transition-transform">
+                <Share2 className="w-3 h-3" />
+              </div>
             </motion.div>
           )}
 
@@ -751,6 +757,23 @@ export default function Home() {
         onRemove={(movie) => toggleWatchlist({ id: movie.tmdb_id, title: movie.title, poster: movie.poster_path } as any)}
         onPlayTrailer={(movie) => handlePlayTrailer({ id: movie.id, title: movie.title } as any)}
       />
+
+      <AnimatePresence>
+        {isPersonaCardOpen && persona && (
+          <PersonaCard 
+            persona={{
+              title: persona.title,
+              badge: persona.badge,
+              description: persona.desc
+            }}
+            stats={{
+              watchlistCount: persona.watchlist_count,
+              historyCount: persona.history_count
+            }}
+            onClose={() => setIsPersonaCardOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </main>
   );
 }
