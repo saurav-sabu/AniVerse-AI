@@ -13,8 +13,9 @@ BASE_URL = "https://api.themoviedb.org/3"
 @tool
 def search_tmdb_movies(query: str) -> str:
     """
-    Search for movies on TMDB based on a text query.
-    Returns a formatted string containing titles, release dates, and overviews of matching movies.
+    Search for movies on TMDB based on a text query. 
+    USE THIS FOR: Specific titles (e.g., 'Inception', 'The Matrix').
+    AVOID THIS FOR: Vibe-based or genre-based discoveries (e.g., 'scary sci-fi', 'neon cyberpunk'). Use 'discover_movies_by_criteria' instead for those.
     """
     if not TMDB_API_KEY:
         logger.error("TMDB_API_KEY not found in environment variables.")
@@ -46,11 +47,22 @@ def search_tmdb_movies(query: str) -> str:
             movie_id = movie.get("id", "N/A")
             release_date = movie.get("release_date", "N/A")
             overview = movie.get("overview", "No description available.")
+            
             poster_path = movie.get("poster_path")
             backdrop_path = movie.get("backdrop_path")
             
-            poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None
-            backdrop_url = f"https://image.tmdb.org/t/p/original{backdrop_path}" if backdrop_path else None
+            # Robust URL construction: ensure leading slash
+            if poster_path:
+                poster_path = poster_path if poster_path.startswith('/') else f"/{poster_path}"
+                poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}"
+            else:
+                poster_url = None
+                
+            if backdrop_path:
+                backdrop_path = backdrop_path if backdrop_path.startswith('/') else f"/{backdrop_path}"
+                backdrop_url = f"https://image.tmdb.org/t/p/original{backdrop_path}"
+            else:
+                backdrop_url = None
             
             formatted_results.append(
                 f"Title: {title} (ID: {movie_id})\n"
@@ -65,6 +77,125 @@ def search_tmdb_movies(query: str) -> str:
     except requests.exceptions.RequestException as e:
         logger.error(f"TMDB API request failed: {e}")
         return f"Error connecting to TMDB API: {str(e)}"
+
+@tool
+def get_genre_ids() -> str:
+    """
+    Get a list of all available movie genres and their IDs on TMDB.
+    Useful before calling 'discover_movies_by_criteria'.
+    """
+    if not TMDB_API_KEY:
+        return "Error: TMDB API key is missing."
+    
+    endpoint = f"{BASE_URL}/genre/movie/list"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US"}
+    
+    try:
+        response = requests.get(endpoint, params=params)
+        response.raise_for_status()
+        genres = response.json().get("genres", [])
+        return "\n".join([f"{g['name']}: {g['id']}" for g in genres])
+    except Exception as e:
+        return f"Error fetching genres: {str(e)}"
+
+@tool
+def get_keyword_ids(query: str) -> str:
+    """
+    Search for keyword IDs on TMDB. Keywords are useful for specific vibes like 'cyberpunk', 'dystopia', 'space'.
+    Returns a list of matching keywords and their IDs.
+    """
+    if not TMDB_API_KEY:
+        return "Error: TMDB API key is missing."
+    
+    endpoint = f"{BASE_URL}/search/keyword"
+    params = {"api_key": TMDB_API_KEY, "query": query, "page": 1}
+    
+    try:
+        response = requests.get(endpoint, params=params)
+        response.raise_for_status()
+        results = response.json().get("results", [])
+        if not results:
+            return f"No keywords found for '{query}'."
+        return "\n".join([f"{r['name']}: {r['id']}" for r in results[:10]])
+    except Exception as e:
+        return f"Error fetching keywords: {str(e)}"
+
+@tool
+def discover_movies_by_criteria(genre_ids: str = None, keyword_ids: str = None, year: int = None, sort_by: str = "popularity.desc") -> str:
+    """
+    Discover movies based on advanced criteria like genres, keywords, and release year.
+    'genre_ids': Comma-separated list of genre IDs (get them from get_genre_ids).
+    'keyword_ids': Comma-separated list of keyword IDs (get them from get_keyword_ids).
+    'year': Specific primary release year.
+    'sort_by': Sorting criteria, e.g., 'popularity.desc', 'vote_average.desc', 'primary_release_date.desc'.
+    Returns a formatted list of recommended movies.
+    """
+    if not TMDB_API_KEY:
+        return "Error: TMDB API key is missing."
+
+    logger.info(f"Discovering movies: Genres={genre_ids}, Keywords={keyword_ids}, Year={year}")
+    
+    endpoint = f"{BASE_URL}/discover/movie"
+    params = {
+        "api_key": TMDB_API_KEY,
+        "language": "en-US",
+        "sort_by": sort_by,
+        "include_adult": False,
+        "include_video": False,
+        "page": 1
+    }
+    
+    if genre_ids:
+        params["with_genres"] = genre_ids
+    if keyword_ids:
+        params["with_keywords"] = keyword_ids
+    if year:
+        params["primary_release_year"] = year
+
+    try:
+        response = requests.get(endpoint, params=params)
+        response.raise_for_status()
+        data = response.json()
+        
+        results = data.get("results", [])
+        if not results:
+            return "No movies matches these criteria."
+
+        formatted_results = []
+        for movie in results[:6]:  # Limit to top 6 results
+            title = movie.get("title", "N/A")
+            movie_id = movie.get("id", "N/A")
+            release_date = movie.get("release_date", "N/A")
+            overview = movie.get("overview", "No description available.")
+            
+            poster_path = movie.get("poster_path")
+            backdrop_path = movie.get("backdrop_path")
+            
+            if poster_path:
+                poster_path = poster_path if poster_path.startswith('/') else f"/{poster_path}"
+                poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}"
+            else:
+                poster_url = None
+                
+            if backdrop_path:
+                backdrop_path = backdrop_path if backdrop_path.startswith('/') else f"/{backdrop_path}"
+                backdrop_url = f"https://image.tmdb.org/t/p/original{backdrop_path}"
+            else:
+                backdrop_url = None
+            
+            formatted_results.append(
+                f"Title: {title} (ID: {movie_id})\n"
+                f"Release Date: {release_date}\n"
+                f"Overview: {overview}\n"
+                f"Poster: {poster_url}\n"
+                f"Backdrop: {backdrop_url}\n"
+            )
+
+        return "\n---\n".join(formatted_results)
+
+    except Exception as e:
+        logger.error(f"TMDB Discover API failed: {e}")
+        return f"Error discovering movies: {str(e)}"
 
 @tool
 def get_movie_watch_providers(movie_id: int) -> str:

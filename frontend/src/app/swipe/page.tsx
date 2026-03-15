@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { fetchWithError, addToWatchlist, addToHistory } from '@/lib/api';
+import { fetchWithError, addToWatchlist, addToHistory, getTMDBImageUrl } from '@/lib/api';
 import { ChevronLeft, X, Heart, Info, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
@@ -60,7 +60,11 @@ const MovieCard = ({
         </motion.div>
 
         {movie.poster ? (
-          <img src={movie.poster} alt={movie.title} className="w-full h-full object-cover" />
+          <img 
+            src={getTMDBImageUrl(movie.poster)} 
+            alt={movie.title} 
+            className="w-full h-full object-cover" 
+          />
         ) : (
           <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-zinc-500">No Poster</div>
         )}

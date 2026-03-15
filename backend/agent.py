@@ -1,7 +1,14 @@
 import os
 from langchain_groq import ChatGroq
 from langgraph.prebuilt import create_react_agent
-from backend.tools.tmdb_tool import search_tmdb_movies, get_movie_watch_providers, get_movie_reviews
+from backend.tools.tmdb_tool import (
+    search_tmdb_movies, 
+    get_movie_watch_providers, 
+    get_movie_reviews,
+    get_genre_ids,
+    get_keyword_ids,
+    discover_movies_by_criteria
+)
 from backend.tools.journal_tool import add_to_journal
 from backend.utils.prompts import get_movie_expert_prompt
 from backend.utils.logger import get_logger
@@ -25,7 +32,15 @@ def initialize_agent():
             temperature=0.3
         )
         
-        tools = [search_tmdb_movies, get_movie_watch_providers, get_movie_reviews, add_to_journal]
+        tools = [
+            search_tmdb_movies, 
+            get_movie_watch_providers, 
+            get_movie_reviews, 
+            get_genre_ids,
+            get_keyword_ids,
+            discover_movies_by_criteria,
+            add_to_journal
+        ]
         system_prompt = get_movie_expert_prompt()
         
         # create_react_agent uses 'prompt' in this version

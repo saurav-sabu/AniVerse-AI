@@ -214,10 +214,17 @@ async def get_swipe_deck(current_user: User = Depends(get_current_user), db: Ses
     deck = []
     for m in trending:
         if str(m.get("id")) not in user_movie_ids:
+            poster_path = m.get("poster_path")
+            if poster_path:
+                poster_path = poster_path if poster_path.startswith('/') else f"/{poster_path}"
+                poster_url = f"https://image.tmdb.org/t/p/w500{poster_path}"
+            else:
+                poster_url = None
+                
             deck.append({
                 "id": str(m.get("id")),
                 "title": m.get("title"),
-                "poster": f"https://image.tmdb.org/t/p/w500{m.get('poster_path')}" if m.get("poster_path") else None,
+                "poster": poster_url,
                 "overview": m.get("overview"),
                 "vote_average": m.get("vote_average")
             })

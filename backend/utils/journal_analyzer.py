@@ -29,10 +29,19 @@ def generate_journal_summary(history_entries):
         Generate a 'Cinematic Emotional Wrap-up' that summarizes their 'phase' or mood.
         Be atmospheric, use cinematic metaphors, and keep it under 100 words.
         If they have ratings, mention the overall quality of their journey.
-        Format with a title like 'YOUR CURRENT VIBE: [VIBE NAME]' followed by the summary."""),
+        Format with a title like 'YOUR CURRENT VIBE: [VIBE NAME]' followed by the summary.
+        DO NOT include any internal thought processes or <think> tags in your output. Output ONLY the summary."""),
         ("user", f"Here is my recent watch history:\n{history_text}")
     ])
 
     chain = prompt | llm
     response = chain.invoke({})
-    return response.content
+    content = response.content
+
+    # Clean up <think> tags if the model still includes them
+    if "<think>" in content and "</think>" in content:
+        content = content.split("</think>")[-1].strip()
+    elif "</think>" in content:
+        content = content.split("</think>")[-1].strip()
+
+    return content
