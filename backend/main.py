@@ -1,10 +1,16 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database import engine, Base
 from backend.routes import auth_routes, recommendation_routes, library_routes, movie_routes
 from backend.utils.logger import get_logger
+from backend.utils.rate_limit import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 logger = get_logger(__name__)
+
+import sys
 
 # Initialize Database - Creates tables if they don't exist
 try:
@@ -12,13 +18,17 @@ try:
     logger.info("Database tables initialized successfully.")
 except Exception as e:
     logger.error(f"Database initialization failed: {e}")
+    sys.exit(1)
 
 app = FastAPI(title="CineSync AI API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Enable CORS for Next.js frontend
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -4,11 +4,14 @@ from backend.database import get_db
 from backend.models.user_model import User
 from backend.schemas.auth_schema import UserCreate, UserLogin, UserResponse, Token, ForgotPasswordRequest
 from backend.auth.auth_utils import get_password_hash, verify_password, create_access_token
+from backend.utils.rate_limit import limiter
+from fastapi import Request
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserResponse)
-def register(user: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
     from backend.utils.logger import get_logger
     logger = get_logger(__name__)
     logger.info(f"Registering user: {user.email}")
@@ -25,12 +28,15 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         db.refresh(new_user)
         logger.info(f"User registered successfully: {user.email}")
         return new_user
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Registration exception for {user.email}: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
 
 @router.post("/login", response_model=Token)
-def login(user: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(
@@ -43,7 +49,13 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/forgot-password")
-def forgot_password(request: ForgotPasswordRequest):
+def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user:
+        # We still return success to avoid user enumeration, but we log the miss
+        from backend.utils.logger import get_logger
+        logger = get_logger(__name__)
+        logger.warning(f"Forgot password requested for non-existent email: {request.email}")
+    
     # In a real app, this would send an email
-    # For now, we'll just return a mock success message
     return {"message": "If this email is registered, a password reset link has been sent."}

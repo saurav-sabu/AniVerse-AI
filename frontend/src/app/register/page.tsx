@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Film, Mail, Lock, UserPlus, ArrowRight } from 'lucide-react';
+import { Film, Mail, Lock, UserPlus, ArrowRight, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { registerUser } from '@/lib/api';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,14 @@ export default function RegisterPage() {
         e.preventDefault();
         if (password !== confirmPassword) {
             setError("Passwords don't match");
+            return;
+        }
+
+        const hasLetter = /[a-zA-Z]/.test(password);
+        const hasNumber = /\d/.test(password);
+
+        if (password.length < 8 || !hasLetter || !hasNumber) {
+            setError("Password must be at least 8 characters and contain both letters and numbers.");
             return;
         }
 
@@ -48,7 +56,10 @@ export default function RegisterPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full max-w-md p-8 glass rounded-3xl border border-white/10 shadow-2xl z-10"
             >
-                <div className="flex flex-col items-center mb-10">
+                <div className="flex flex-col items-center mb-10 relative">
+                    <Link href="/login" className="absolute left-0 top-0 p-2 text-white/30 hover:text-white transition-colors">
+                        <ArrowLeft className="w-5 h-5" />
+                    </Link>
                     <Film className="w-12 h-12 text-brand-pink mb-4" />
                     <h1 className="text-3xl font-extrabold text-gradient">Create Account</h1>
                     <p className="text-white/50 mt-2">Join the future of cinema recommendations</p>

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
@@ -6,14 +6,14 @@ class LibraryBase(BaseModel):
     tmdb_id: str
     title: str
     poster_path: Optional[str] = None
-    rating: Optional[int] = None
+    rating: Optional[int] = Field(None, ge=1, le=5)
     notes: Optional[str] = None
 
 class LibraryCreate(LibraryBase):
     pass
 
 class HistoryUpdate(BaseModel):
-    rating: Optional[int] = None
+    rating: Optional[int] = Field(None, ge=1, le=5)
     notes: Optional[str] = None
 
 class LibraryResponse(LibraryBase):

@@ -119,7 +119,7 @@ export default function VibeRadar({ onClose }: { onClose: () => void }) {
               <div 
                 className={`w-3 h-3 rounded-full cursor-pointer transition-all duration-300 shadow-[0_0_15px_rgba(236,72,153,0.5)]
                   ${node.type === 'watchlist' ? 'bg-pink-500' : 'bg-purple-500'}
-                  hover:scale-200 hover:shadow-[0_0_25px_rgba(236,72,153,0.8)]
+                  hover:scale-150 hover:shadow-[0_0_15px_rgba(236,72,153,0.8)]
                 `}
               />
             </motion.div>

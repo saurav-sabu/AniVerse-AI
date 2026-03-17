@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CineSync AI | Your Agentic Cinema Expert",
-  description: "Deeper movie recommendations powered by agentic AI and TMDB reviews.",
+  title: "AniVerse AI | Your Agentic Cinema Expert",
+  description: "Deeper movie recommendations powered by agentic AI and TMDB reviews. Explore your cinematic universe spatially.",
 };
 
 export default function RootLayout({

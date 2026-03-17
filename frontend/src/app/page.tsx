@@ -117,7 +117,51 @@ const MovieCard = ({
 };
 
 const TrailerModal = ({ movie, trailerKey, onClose }: { movie: MovieMetadata | null, trailerKey: string | null, onClose: () => void }) => {
-  // ... existing code ...
+  if (!movie || !trailerKey) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: 20 }}
+          className="relative w-full max-w-4xl aspect-video rounded-3xl overflow-hidden glass border border-white/10 shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="absolute top-0 left-0 right-0 p-6 z-10 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-brand-pink/20">
+                <Film className="w-5 h-5 text-brand-pink" />
+              </div>
+              <h2 className="text-xl font-black tracking-tight text-white uppercase">{movie.title} - Trailer</h2>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <iframe
+            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
+            title={`${movie.title} Trailer`}
+            className="w-full h-full"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
 };
 
 const VaultDrawer = ({ 
@@ -186,12 +230,15 @@ const VaultDrawer = ({
                       animate={{ opacity: 1, scale: 1 }}
                       className="group relative aspect-[2/3] rounded-2xl overflow-hidden border border-white/5 hover:border-brand-pink/50 transition-colors"
                     >
-                      <Image 
-                        src={getTMDBImageUrl(movie.poster_path)} 
-                        alt={movie.title}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-110"
-                      />
+                      {getTMDBImageUrl(movie.poster_path) && (
+                        <Image 
+                          src={getTMDBImageUrl(movie.poster_path)} 
+                          alt={movie.title}
+                          fill
+                          sizes="(max-width: 768px) 50vw, 33vw"
+                          className="object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
@@ -289,7 +336,7 @@ export default function Home() {
     } else {
       setIsAuthenticated(true);
       fetchWatchlist();
-      fetchPersona();
+      // fetchPersona is called inside fetchWatchlist, no need to call twice
       
       // Check for tour
       const tourCompleted = localStorage.getItem('cinesync_tour_completed');
@@ -298,6 +345,13 @@ export default function Home() {
       }
     }
   }, [router]);
+
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [messages]);
 
   const fetchPersona = async () => {
     try {
@@ -368,18 +422,38 @@ export default function Home() {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: input };
+    const controller = new AbortController();
+    const userMessage: Message = { 
+      id: Date.now().toString(),
+      role: 'user', 
+      content: input 
+    };
     setMessages((prev) => [...prev, userMessage]);
+    
+    // Smooth scroll to bottom
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }, 100);
+
     setInput('');
     setIsLoading(true);
 
     try {
-      const response = await getRecommendation(input, messages);
-      const assistantMessage: Message = { role: 'assistant', content: response };
+      const allMessages = [...messages, userMessage];
+      const response = await getRecommendation(input, allMessages);
+      const assistantMessage: Message = { 
+        id: (Date.now() + 1).toString(),
+        role: 'assistant', 
+        content: response 
+      };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
       if (error.message === 'Unauthorized') return;
-      setMessages((prev) => [...prev, { role: 'assistant', content: "Oops! My film reels got tangled. Please verify your TMDB API key is set and try again." }]);
+      setMessages((prev) => [...prev, { 
+        id: (Date.now() + 2).toString(),
+        role: 'assistant', 
+        content: "Oops! My film reels got tangled. Please verify your TMDB API key is set and try again." 
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -421,6 +495,11 @@ export default function Home() {
         const transcript = event.results[0][0].transcript;
         setInput(transcript);
         setIsListening(false);
+        // Auto-submit after voice input
+        setTimeout(() => {
+          const form = document.querySelector('form');
+          if (form) form.requestSubmit();
+        }, 800);
       };
 
       recognitionRef.current.onerror = (event: any) => {
@@ -443,15 +522,20 @@ export default function Home() {
     }
   };
 
-  const handlePlayTrailer = async (movie: MovieMetadata) => {
+  const handlePlayTrailer = async (movie: any) => {
+    const movieId = movie.id || movie.tmdb_id;
+    if (!movieId) {
+      console.error("Cannot play trailer: No movie ID provided", movie);
+      return;
+    }
     setIsLoading(true);
     try {
-      const key = await getMovieTrailer(movie.id);
+      const key = await getMovieTrailer(movieId);
       setTrailerKey(key);
       setSelectedTrailer(movie);
     } catch (e) {
       console.error("Failed to fetch trailer", e);
-      alert("Trailer not found for this movie.");
+      // Removed alert for better UX. Could add a toast notification here in the future.
     } finally {
       setIsLoading(false);
     }
@@ -721,7 +805,7 @@ export default function Home() {
             <AnimatePresence initial={false}>
               {messages.map((message, idx) => (
                 <motion.div
-                  key={idx}
+                  key={message.id || idx}
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
@@ -866,7 +950,7 @@ export default function Home() {
         movies={watchlist}
         onRemove={(movie) => toggleWatchlist({ id: movie.tmdb_id, title: movie.title, poster: movie.poster_path } as any)}
         onMarkWatched={(movie) => handleMarkWatched(movie)}
-        onPlayTrailer={(movie) => handlePlayTrailer({ id: movie.id, title: movie.title } as any)}
+        onPlayTrailer={(movie) => handlePlayTrailer(movie)}
       />
 
 

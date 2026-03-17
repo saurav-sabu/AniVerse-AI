@@ -1,4 +1,5 @@
 export interface Message {
+    id?: string;
     role: 'user' | 'assistant';
     content: string;
 }
@@ -10,9 +11,10 @@ export interface RecommendResponse {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export function getTMDBImageUrl(path: string | null, size: 'w500' | 'original' = 'w500'): string {
-    if (!path) return "";
+    const fallback = "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500&auto=format&fit=crop";
+    if (!path) return fallback;
     const cleanPath = path.trim();
-    if (cleanPath === "None" || cleanPath === "null" || cleanPath === "") return "";
+    if (cleanPath === "None" || cleanPath === "null" || cleanPath === "") return fallback;
     if (cleanPath.toLowerCase().startsWith('http')) return cleanPath;
     
     const formattedPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
@@ -106,6 +108,11 @@ export async function forgotPassword(email: string): Promise<string> {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
     });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Failed to request password reset' }));
+        throw new Error(error.detail || 'Failed to request password reset');
+    }
 
     const data = await response.json();
     return data.message;

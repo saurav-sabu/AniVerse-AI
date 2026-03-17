@@ -39,7 +39,7 @@ const MovieCard = ({
   return (
     <motion.div
       drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
+      dragConstraints={{ left: -300, right: 300 }}
       onDragEnd={handleDragEnd}
       style={{ x, rotate, opacity }}
       className="absolute inset-0 flex items-center justify-center p-4 cursor-grab active:cursor-grabbing"
@@ -87,15 +87,23 @@ const MovieCard = ({
 export default function CineSwipePage() {
   const [deck, setDeck] = useState<SwipeMovie[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cinesync_token') : null;
+    if (!token) {
+      window.location.href = '/login';
+      return;
+    }
+
     const loadDeck = async () => {
       try {
         const data = await fetchWithError('/library/swipe');
-        setDeck(data.deck);
-      } catch (err) {
+        setDeck(data.deck || []);
+      } catch (err: any) {
         console.error('Failed to load swipe deck', err);
+        setError(err.message || 'Failed to initialize movie deck.');
       } finally {
         setLoading(false);
       }
@@ -104,6 +112,7 @@ export default function CineSwipePage() {
   }, []);
 
   const handleSwipe = async (direction: 'left' | 'right') => {
+    if (!deck || deck.length === 0 || currentIndex >= deck.length) return;
     const movie = deck[currentIndex];
     
     if (direction === 'right') {
@@ -129,6 +138,24 @@ export default function CineSwipePage() {
     return (
       <div className="h-screen bg-[#050505] flex items-center justify-center">
         <div className="text-brand-pink animate-pulse font-black uppercase tracking-widest">Shuffling Deck...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen bg-[#050505] flex flex-col items-center justify-center p-8 text-center">
+        <div className="p-6 rounded-full bg-red-500/10 mb-6">
+          <X size={48} className="text-red-500" />
+        </div>
+        <h2 className="text-2xl font-black text-white uppercase mb-2">Error Loading Deck</h2>
+        <p className="text-white/40 max-w-xs mb-8">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-8 py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-white uppercase tracking-widest hover:bg-white/10 transition-all"
+        >
+          Try Again
+        </button>
       </div>
     );
   }

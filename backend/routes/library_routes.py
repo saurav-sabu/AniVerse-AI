@@ -6,11 +6,14 @@ from backend.models.library_model import Watchlist, History
 from backend.schemas.library_schema import LibraryCreate, LibraryResponse, HistoryUpdate
 from backend.auth.get_user import get_current_user
 from backend.models.user_model import User
+from backend.utils.rate_limit import limiter
+from fastapi import Request
 
 router = APIRouter(prefix="/library", tags=["library"])
 
 @router.post("/watchlist", response_model=LibraryResponse)
-def add_to_watchlist(movie: LibraryCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def add_to_watchlist(request: Request, movie: LibraryCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # Check if already in watchlist
     existing = db.query(Watchlist).filter(
         Watchlist.user_id == current_user.id,
@@ -31,8 +34,8 @@ def add_to_watchlist(movie: LibraryCreate, current_user: User = Depends(get_curr
     return new_entry
 
 @router.get("/watchlist", response_model=List[LibraryResponse])
-def get_watchlist(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(Watchlist).filter(Watchlist.user_id == current_user.id).all()
+def get_watchlist(skip: int = 0, limit: int = 50, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return db.query(Watchlist).filter(Watchlist.user_id == current_user.id).offset(skip).limit(limit).all()
 
 @router.delete("/watchlist/{tmdb_id}")
 def remove_from_watchlist(tmdb_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -48,7 +51,8 @@ def remove_from_watchlist(tmdb_id: str, current_user: User = Depends(get_current
     return {"message": "Removed from watchlist"}
 
 @router.post("/history", response_model=LibraryResponse)
-def add_to_history(movie: LibraryCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def add_to_history(request: Request, movie: LibraryCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     new_entry = History(
         user_id=current_user.id,
         tmdb_id=movie.tmdb_id,
@@ -63,7 +67,8 @@ def add_to_history(movie: LibraryCreate, current_user: User = Depends(get_curren
     return new_entry
 
 @router.patch("/history/{tmdb_id}", response_model=LibraryResponse)
-def update_history_entry(tmdb_id: str, update: HistoryUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def update_history_entry(request: Request, tmdb_id: str, update: HistoryUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     entry = db.query(History).filter(
         History.user_id == current_user.id,
         History.tmdb_id == tmdb_id
@@ -84,14 +89,15 @@ def update_history_entry(tmdb_id: str, update: HistoryUpdate, current_user: User
 from backend.utils.journal_analyzer import generate_journal_summary
 
 @router.get("/journal/summary")
-def get_journal_summary(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def get_journal_summary(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     history = db.query(History).filter(History.user_id == current_user.id).order_by(History.viewed_at.desc()).limit(10).all()
     summary = generate_journal_summary(history)
     return {"summary": summary}
 
 @router.get("/history", response_model=List[LibraryResponse])
-def get_history(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(History).filter(History.user_id == current_user.id).order_by(History.viewed_at.desc()).limit(20).all()
+def get_history(skip: int = 0, limit: int = 20, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return db.query(History).filter(History.user_id == current_user.id).order_by(History.viewed_at.desc()).offset(skip).limit(limit).all()
 
 from backend.tools.tmdb_tool import get_movie_details
 from collections import Counter
@@ -113,13 +119,25 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
     # 2. Extract unique movie IDs
     movie_ids = list(set([m.tmdb_id for m in all_movies]))
     
+    # Simple in-memory cache for the duration of this request or globally?
+    # Let's use a module-level cache for better performance across requests
+    from backend.tools.tmdb_tool import get_movie_details
+    global_movie_cache = {} # In a real app, use Redis or functools.lru_cache
+
     # 3. Tally genres
     genre_tally = Counter()
     for mid in movie_ids:
-        details = get_movie_details(movie_id=int(mid))
-        if "genres" in details:
-            for g in details["genres"]:
-                genre_tally[g["name"]] += 1
+        try:
+            m_id = int(mid)
+            if m_id not in global_movie_cache:
+                global_movie_cache[m_id] = get_movie_details(movie_id=m_id)
+            
+            details = global_movie_cache[m_id]
+            if "genres" in details:
+                for g in details["genres"]:
+                    genre_tally[g["name"]] += 1
+        except (ValueError, TypeError):
+            continue
                 
     if not genre_tally:
         return {
@@ -160,7 +178,7 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
         "history_count": len(history)
     }
 @router.get("/radar")
-async def get_radar_data(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_radar_data(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     watchlist = db.query(Watchlist).filter(Watchlist.user_id == current_user.id).all()
     history = db.query(History).filter(History.user_id == current_user.id).all()
     
@@ -192,7 +210,7 @@ async def get_radar_data(db: Session = Depends(get_db), current_user: User = Dep
     return {"nodes": nodes}
 
 @router.get("/swipe")
-async def get_swipe_deck(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_swipe_deck(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     import requests
     import os
     

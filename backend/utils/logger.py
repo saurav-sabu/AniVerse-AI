@@ -13,7 +13,7 @@ def get_logger(name: str):
         logger.setLevel(logging.INFO)
         
         # Create logs directory if it doesn't exist
-        log_dir = "logs"
+        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
             

@@ -91,10 +91,10 @@ def get_genre_ids() -> str:
     params = {"api_key": TMDB_API_KEY, "language": "en-US"}
     
     try:
-        response = requests.get(endpoint, params=params)
+        response = requests.get(endpoint, params=params, timeout=10)
         response.raise_for_status()
         genres = response.json().get("genres", [])
-        return "\n".join([f"{g['name']}: {g['id']}" for g in genres])
+        return "\n".join([f"{g.get('name', 'N/A')}: {g.get('id', 'N/A')}" for g in genres])
     except Exception as e:
         return f"Error fetching genres: {str(e)}"
 
@@ -111,12 +111,12 @@ def get_keyword_ids(query: str) -> str:
     params = {"api_key": TMDB_API_KEY, "query": query, "page": 1}
     
     try:
-        response = requests.get(endpoint, params=params)
+        response = requests.get(endpoint, params=params, timeout=10)
         response.raise_for_status()
         results = response.json().get("results", [])
         if not results:
             return f"No keywords found for '{query}'."
-        return "\n".join([f"{r['name']}: {r['id']}" for r in results[:10]])
+        return "\n".join([f"{r.get('name', 'N/A')}: {r.get('id', 'N/A')}" for r in results[:10]])
     except Exception as e:
         return f"Error fetching keywords: {str(e)}"
 
@@ -135,6 +135,11 @@ def discover_movies_by_criteria(genre_ids: str = None, keyword_ids: str = None, 
 
     logger.info(f"Discovering movies: Genres={genre_ids}, Keywords={keyword_ids}, Year={year}")
     
+    # Validate sort_by
+    allowed_sorts = ["popularity.desc", "popularity.asc", "vote_average.desc", "vote_average.asc", "primary_release_date.desc", "primary_release_date.asc"]
+    if sort_by not in allowed_sorts:
+        sort_by = "popularity.desc"
+
     endpoint = f"{BASE_URL}/discover/movie"
     params = {
         "api_key": TMDB_API_KEY,
@@ -159,7 +164,7 @@ def discover_movies_by_criteria(genre_ids: str = None, keyword_ids: str = None, 
         
         results = data.get("results", [])
         if not results:
-            return "No movies matches these criteria."
+            return "No movies match these criteria."
 
         formatted_results = []
         for movie in results[:6]:  # Limit to top 6 results
@@ -225,15 +230,15 @@ def get_movie_watch_providers(movie_id: int) -> str:
         output = []
         
         if "flatrate" in us_providers:
-            streaming = [p["provider_name"] for p in us_providers["flatrate"]]
+            streaming = [p.get("provider_name", "N/A") for p in us_providers.get("flatrate", [])]
             output.append(f"Streaming on: {', '.join(streaming)}")
         
         if "rent" in us_providers:
-            rent = [p["provider_name"] for p in us_providers["rent"]]
+            rent = [p.get("provider_name", "N/A") for p in us_providers.get("rent", [])]
             output.append(f"Available to Rent on: {', '.join(rent)}")
             
         if "buy" in us_providers:
-            buy = [p["provider_name"] for p in us_providers["buy"]]
+            buy = [p.get("provider_name", "N/A") for p in us_providers.get("buy", [])]
             output.append(f"Available to Buy on: {', '.join(buy)}")
 
         return "\n".join(output) if output else "No common streaming/rental providers found."

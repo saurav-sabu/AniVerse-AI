@@ -25,6 +25,7 @@ def initialize_agent():
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             logger.error("GROQ_API_KEY not found in environment")
+            raise ValueError("GROQ_API_KEY is required for the CineSync AI agent.")
         
         llm = ChatGroq(
             model="qwen/qwen3-32b",
@@ -52,13 +53,28 @@ def initialize_agent():
         logger.error(f"Failed to initialize agent: {e}")
         raise
 
+# Initialize the agent once at module level
+try:
+    AGENT = initialize_agent()
+except Exception:
+    AGENT = None
+
 def get_movie_recommendation(user_query: str, history: list = None, user_context: dict = None):
     """
     Functional entry point to get a recommendation from the agent.
     Accepts an optional 'history' list of (role, content) tuples.
     'user_context' can include email for tool usage.
     """
-    agent = initialize_agent()
+    if user_context and 'email' in user_context:
+        # Hardening: Use clear delimiters and instructions to prevent injection
+        context_block = f"\n=== USER CONTEXT ===\nEmail: {user_context['email']}\n====================\n\n"
+        user_query = context_block + user_query
+
+    if not AGENT:
+        logger.error("Agent not initialized. Check GROQ_API_KEY.")
+        return "I'm sorry, I'm currently unable to assist. Please verify my configuration."
+
+    agent = AGENT
     logger.info(f"Processing query through agent: {user_query}")
     
     try:
@@ -69,16 +85,23 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
                 messages.append((role, content))
         
         # Add user context to the first system message or a separate note
+        # Add user context with clear separation
         if user_context and 'email' in user_context:
-            user_query = f"[User Context: {user_context['email']}]\n\n" + user_query
+            context_block = f"\n=== USER CONTEXT ===\nEmail: {user_context['email']}\n====================\n\n"
+            user_query = context_block + user_query
             
         # Add the current user query
         messages.append(("user", user_query))
         
         inputs = {"messages": messages}
-        result = agent.invoke(inputs)
+        config = {"configurable": {"user_email": user_context.get("email") if user_context else None}}
+        result = agent.invoke(inputs, config=config)
         
-        # The last message in the state will be the AI's response
+        # Filter for the last AI message
+        ai_messages = [m for m in result["messages"] if hasattr(m, "content") and m.__class__.__name__ == "AIMessage"]
+        if ai_messages:
+            return ai_messages[-1].content
+            
         return result["messages"][-1].content
         
     except Exception as e:

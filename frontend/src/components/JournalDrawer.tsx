@@ -137,7 +137,13 @@ export const JournalDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: (
                     <div key={item.id} className="group relative flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all">
                       <div className="relative w-24 aspect-[2/3] rounded-lg overflow-hidden shrink-0 shadow-xl">
                         {item.poster_path ? (
-                          <Image src={getTMDBImageUrl(item.poster_path)} alt={item.title} fill className="object-cover" />
+                          <Image 
+                            src={getTMDBImageUrl(item.poster_path)} 
+                            alt={item.title} 
+                            fill 
+                            sizes="100px"
+                            className="object-cover" 
+                          />
                         ) : (
                           <div className="w-full h-full bg-white/5 flex items-center justify-center">
                             <Film className="w-8 h-8 text-white/10" />
