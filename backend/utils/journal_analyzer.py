@@ -19,9 +19,14 @@ def generate_journal_summary(history_entries):
     # Format the history for the prompt
     history_text = ""
     for entry in history_entries[:10]: # Analyze last 10 entries
-        rating_str = f"Rated {entry.rating}/5" if entry.rating else "No rating"
-        note_str = f"Notes: {entry.notes}" if entry.notes else "No notes"
-        history_text += f"- {entry.title} ({rating_str}). {note_str}\n"
+        # Robustly handle both SQLAlchemy objects and dictionaries
+        title = getattr(entry, 'title', entry.get('title') if isinstance(entry, dict) else 'Unknown')
+        rating = getattr(entry, 'rating', entry.get('rating', None) if isinstance(entry, dict) else None)
+        notes = getattr(entry, 'notes', entry.get('notes', None) if isinstance(entry, dict) else None)
+        
+        rating_str = f"Rated {rating}/5" if rating else "No rating"
+        note_str = f"Notes: {notes}" if notes else "No notes"
+        history_text += f"- {title} ({rating_str}). {note_str}\n"
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", """You are a poetic and deeply insightful film critic and therapist. 

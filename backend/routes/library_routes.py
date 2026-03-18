@@ -102,6 +102,9 @@ def get_history(skip: int = 0, limit: int = 20, current_user: User = Depends(get
 from backend.tools.tmdb_tool import get_movie_details
 from collections import Counter
 
+# Persistent cache for persona calculation to prevent redundant API calls across requests
+global_movie_cache = {} 
+
 @router.get("/persona")
 def get_user_persona(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # 1. Get all library items
@@ -119,10 +122,7 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
     # 2. Extract unique movie IDs
     movie_ids = list(set([m.tmdb_id for m in all_movies]))
     
-    # Simple in-memory cache for the duration of this request or globally?
-    # Let's use a module-level cache for better performance across requests
-    from backend.tools.tmdb_tool import get_movie_details
-    global_movie_cache = {} # In a real app, use Redis or functools.lru_cache
+    global global_movie_cache
 
     # 3. Tally genres
     genre_tally = Counter()

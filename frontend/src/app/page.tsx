@@ -439,8 +439,8 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const allMessages = [...messages, userMessage];
-      const response = await getRecommendation(input, allMessages);
+      // Pass the previous messages as history. The current input is handled separately by the backend.
+      const response = await getRecommendation(input, messages);
       const assistantMessage: Message = { 
         id: (Date.now() + 1).toString(),
         role: 'assistant', 

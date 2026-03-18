@@ -84,13 +84,7 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
             for role, content in history:
                 messages.append((role, content))
         
-        # Add user context to the first system message or a separate note
-        # Add user context with clear separation
-        if user_context and 'email' in user_context:
-            context_block = f"\n=== USER CONTEXT ===\nEmail: {user_context['email']}\n====================\n\n"
-            user_query = context_block + user_query
-            
-        # Add the current user query
+        # The current user query (already has context if applicable)
         messages.append(("user", user_query))
         
         inputs = {"messages": messages}
