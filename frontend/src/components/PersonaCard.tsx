@@ -24,8 +24,25 @@ interface PersonaCardProps {
   onClose: () => void;
 }
 
+const useClipboard = () => {
+  const [copied, setCopied] = React.useState(false);
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      return true;
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      return false;
+    }
+  };
+  return { copied, copy };
+};
+
 export const PersonaCard = ({ persona, stats, onClose }: PersonaCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const { copied, copy } = useClipboard();
 
   const handleDownload = async () => {
     if (cardRef.current === null) return;
@@ -121,19 +138,25 @@ export const PersonaCard = ({ persona, stats, onClose }: PersonaCardProps) => {
             Download
           </button>
           <button 
-            className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-black uppercase text-xs tracking-widest hover:bg-white/10 transition-all duration-300 active:scale-95"
+            className={cn(
+              "flex items-center justify-center gap-2 py-4 rounded-2xl font-black uppercase text-xs tracking-widest transition-all duration-300 active:scale-95 border",
+              copied ? "bg-green-500/20 border-green-500 text-green-500" : "bg-white/5 border-white/10 text-white hover:bg-white/10"
+            )}
             onClick={() => {
+              const shareData = {
+                title: 'My CineSync Persona',
+                text: `I'm a ${persona.title} on CineSync AI!`,
+                url: window.location.href,
+              };
               if (navigator.share) {
-                navigator.share({
-                  title: 'My CineSync Persona',
-                  text: `I'm a ${persona.title} on CineSync AI!`,
-                  url: window.location.href,
-                });
+                navigator.share(shareData);
+              } else {
+                copy(`${shareData.text} ${shareData.url}`);
               }
             }}
           >
             <Share2 className="w-4 h-4" />
-            Share
+            {copied ? 'Link Copied!' : 'Share'}
           </button>
         </div>
       </div>

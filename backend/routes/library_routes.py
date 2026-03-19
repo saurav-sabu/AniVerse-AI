@@ -101,9 +101,12 @@ def get_history(skip: int = 0, limit: int = 20, current_user: User = Depends(get
 
 from backend.tools.tmdb_tool import get_movie_details
 from collections import Counter
+from functools import lru_cache
 
-# Persistent cache for persona calculation to prevent redundant API calls across requests
-global_movie_cache = {} 
+# Wrap get_movie_details with an LRU cache to bound memory usage
+@lru_cache(maxsize=1000)
+def get_cached_movie_details(movie_id: int):
+    return get_movie_details(movie_id)
 
 @router.get("/persona")
 def get_user_persona(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -122,17 +125,11 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
     # 2. Extract unique movie IDs
     movie_ids = list(set([m.tmdb_id for m in all_movies]))
     
-    global global_movie_cache
-
-    # 3. Tally genres
     genre_tally = Counter()
     for mid in movie_ids:
         try:
             m_id = int(mid)
-            if m_id not in global_movie_cache:
-                global_movie_cache[m_id] = get_movie_details(movie_id=m_id)
-            
-            details = global_movie_cache[m_id]
+            details = get_cached_movie_details(m_id)
             if "genres" in details:
                 for g in details["genres"]:
                     genre_tally[g["name"]] += 1

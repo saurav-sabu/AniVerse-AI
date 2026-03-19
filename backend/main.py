@@ -10,7 +10,19 @@ from slowapi.errors import RateLimitExceeded
 
 logger = get_logger(__name__)
 
-import sys
+# Validate environment variables
+REQUIRED_ENV_VARS = [
+    "TMDB_API_KEY",
+    "GROQ_API_KEY",
+    "SECRET_KEY",
+    "GOOGLE_API_KEY",
+]
+
+missing_vars = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
+if missing_vars:
+    logger.critical(f"Missing required environment variables: {', '.join(missing_vars)}")
+    logger.critical("Backend startup aborted. Please check your .env file.")
+    sys.exit(1)
 
 # Initialize Database - Creates tables if they don't exist
 try:

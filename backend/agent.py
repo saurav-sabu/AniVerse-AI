@@ -77,27 +77,42 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
     agent = AGENT
     logger.info(f"Processing query through agent: {user_query}")
     
-    try:
-        # Build the messages list starting with history
-        messages = []
-        if history:
-            for role, content in history:
-                messages.append((role, content))
-        
-        # The current user query (already has context if applicable)
-        messages.append(("user", user_query))
-        
-        inputs = {"messages": messages}
-        config = {"configurable": {"user_email": user_context.get("email") if user_context else None}}
-        result = agent.invoke(inputs, config=config)
-        
-        # Filter for the last AI message
-        ai_messages = [m for m in result["messages"] if hasattr(m, "content") and m.__class__.__name__ == "AIMessage"]
-        if ai_messages:
-            return ai_messages[-1].content
+    # Retry logic for the agent invocation to handle rate limits (429)
+    max_attempts = 3
+    attempt_delay = 5 # Initial delay
+    
+    for attempt in range(max_attempts):
+        try:
+            # Build the messages list starting with history
+            messages = []
+            if history:
+                for role, content in history:
+                    messages.append((role, content))
             
-        return result["messages"][-1].content
-        
-    except Exception as e:
-        logger.error(f"Error during agent invocation: {e}")
-        return "I'm sorry, I encountered an error while trying to find recommendations for you."
+            # The current user query (already has context if applicable)
+            messages.append(("user", user_query))
+            
+            inputs = {"messages": messages}
+            config = {"configurable": {"user_email": user_context.get("email") if user_context else None}}
+            
+            result = agent.invoke(inputs, config=config)
+            
+            # Filter for the last AI message
+            ai_messages = [m for m in result["messages"] if hasattr(m, "content") and m.__class__.__name__ == "AIMessage"]
+            if ai_messages:
+                return ai_messages[-1].content
+                
+            return result["messages"][-1].content
+            
+        except Exception as e:
+            error_str = str(e).lower()
+            # If it's a rate limit error (429) or a server error (500+), retry
+            if ("rate limit" in error_str or "429" in error_str or "500" in error_str or "503" in error_str) and attempt < max_attempts - 1:
+                import time
+                logger.warning(f"AI Agent rate limit or server error (attempt {attempt + 1}): {e}. Retrying in {attempt_delay}s...")
+                time.sleep(attempt_delay)
+                attempt_delay *= 2
+                continue
+                
+            logger.error(f"Error during agent invocation after {attempt + 1} attempts: {e}")
+            return "I'm sorry, I encountered an error while trying to find recommendations for you. Please try again in a moment."

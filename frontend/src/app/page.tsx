@@ -60,18 +60,16 @@ const MovieCard = ({
       className="group relative flex flex-col w-32 sm:w-40 shrink-0 overflow-hidden rounded-xl border border-white/10 glass transition-all hover:border-brand-pink/50 hover:shadow-2xl hover:shadow-brand-pink/10"
     >
       <div className="aspect-[2/3] w-full overflow-hidden bg-white/5 relative">
-        {movie.poster && movie.poster !== "None" && movie.poster !== "null" ? (
-          <img
-            src={getTMDBImageUrl(movie.poster)}
-            alt={movie.title}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-white/5">
-            <Film className="w-8 h-8 text-white/10" />
-          </div>
-        )}
+        <Image
+          src={getTMDBImageUrl(movie.poster)}
+          alt={movie.title}
+          fill
+          unoptimized={true} // Bypasses potential proxy issues for external images while still using the remotePatterns security
+          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+          loading="lazy"
+          placeholder="blur"
+          blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNTMiIHZpZXdCb3g9IjAgMCA0MCA1MyIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNTMiIGZpbGw9IiMzMzMiLz48L3N2Zz4=" // Simple dark gray placeholder
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
         
         {/* Play Trailer Button overlay */}
@@ -314,6 +312,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [selectedTrailer, setSelectedTrailer] = useState<MovieMetadata | null>(null);
@@ -439,6 +438,7 @@ export default function Home() {
     setIsLoading(true);
 
     try {
+      setError(null);
       // Pass the previous messages as history. The current input is handled separately by the backend.
       const response = await getRecommendation(input, messages);
       const assistantMessage: Message = { 
@@ -447,12 +447,19 @@ export default function Home() {
         content: response 
       };
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error: any) {
-      if (error.message === 'Unauthorized') return;
+    } catch (err: any) {
+      if (err.message === 'Session expired' || err.message === 'Unauthorized') {
+        setError("Your session has expired. Redirecting to login...");
+        return;
+      }
+      
+      const errorMessage = err.message || "Oops! My film reels got tangled. Please try again.";
+      setError(errorMessage);
+      
       setMessages((prev) => [...prev, { 
         id: (Date.now() + 2).toString(),
         role: 'assistant', 
-        content: "Oops! My film reels got tangled. Please verify your TMDB API key is set and try again." 
+        content: "I'm having a bit of trouble connecting right now. Let's try that again in a second!" 
       }]);
     } finally {
       setIsLoading(false);
@@ -549,11 +556,13 @@ export default function Home() {
     // Regex for metadata, including optional leading bullet point and whitespace
     const metadataWithBulletRegex = /(?:\n\s*[-*]\s*)?\[METADATA: (\{[\s\S]*?\})\]/g;
     const metadataRegex = /\[METADATA: (\{[\s\S]*?\})\]/g;
+    // Enhanced regex to handle potentially nested JSON or multi-line blocks more safely
+    const robustMetadataRegex = /\[METADATA: (\{[\s\S]*?\})(?=\s*\])\]/g;
     const movies: MovieMetadata[] = [];
 
     // 1. Extract metadata blocks
     let match;
-    while ((match = metadataRegex.exec(content)) !== null) {
+    while ((match = robustMetadataRegex.exec(content)) !== null) {
       try {
         const movieData = JSON.parse(match[1]);
         movies.push(movieData);
@@ -610,6 +619,25 @@ export default function Home() {
 
   return (
     <main className="relative flex flex-col h-screen overflow-hidden bg-[#050505]">
+      {/* Global Error Banner */}
+      <AnimatePresence>
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4"
+          >
+            <div className="bg-red-500/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-red-400/20">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <p className="text-sm font-medium">{error}</p>
+              <button onClick={() => setError(null)} className="ml-auto hover:bg-white/10 p-1 rounded-full transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Animated Background Blobs */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <motion.div

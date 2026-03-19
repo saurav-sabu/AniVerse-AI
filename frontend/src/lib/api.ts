@@ -13,13 +13,30 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export function getTMDBImageUrl(path: string | null, size: 'w500' | 'original' = 'w500'): string {
     const fallback = "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500&auto=format&fit=crop";
     if (!path) return fallback;
-    const cleanPath = path.trim();
-    if (cleanPath === "None" || cleanPath === "null" || cleanPath === "") return fallback;
-    if (cleanPath.toLowerCase().startsWith('http')) return cleanPath;
     
+    let cleanPath = path.toString().trim();
+    
+    // Normalize string indicator cases
+    const lowerPath = cleanPath.toLowerCase();
+    if (lowerPath === "none" || lowerPath === "null" || lowerPath === "" || lowerPath === "undefined") {
+        return fallback;
+    }
+    
+    // If it's already a full URL, Ensure HTTPS for TMDB
+    if (lowerPath.startsWith('http')) {
+        if (lowerPath.includes('tmdb.org') || lowerPath.includes('themoviedb.org')) {
+            return cleanPath.replace(/^http:/i, 'https:');
+        }
+        return cleanPath;
+    }
+    
+    // Handle cases where AI mistakenly prepends with leading junk/protocol
+    cleanPath = cleanPath.replace(/^\/+(http)/i, '$1');
+    if (cleanPath.startsWith('http')) return getTMDBImageUrl(cleanPath, size);
+    
+    // Construct absolute URL for relative paths
     const formattedPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
-    const url = `https://image.tmdb.org/t/p/${size}${formattedPath}`;
-    return url;
+    return `https://image.tmdb.org/t/p/${size}${formattedPath}`;
 }
 
 export async function fetchWithError(endpoint: string, options: RequestInit = {}): Promise<any> {

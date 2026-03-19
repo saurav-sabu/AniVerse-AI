@@ -7,10 +7,38 @@ from dotenv import load_dotenv
 load_dotenv()
 logger = get_logger(__name__)
 
+import time
+import functools
+
 TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 BASE_URL = "https://api.themoviedb.org/3"
 
+def retry_on_error(max_retries=3, initial_delay=1):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = initial_delay
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except (requests.exceptions.RequestException, Exception) as e:
+                    last_exception = e
+                    # Specifically check for 429 or 5xx if it's a requests exception
+                    if isinstance(e, requests.exceptions.HTTPError):
+                        if e.response.status_code not in [429, 500, 502, 503, 504]:
+                            raise # Don't retry on 400, 401, 404, etc.
+                    
+                    logger.warning(f"Attempt {attempt + 1} failed for {func.__name__}: {e}. Retrying in {delay}s...")
+                    time.sleep(delay)
+                    delay *= 2
+            logger.error(f"All {max_retries} attempts failed for {func.__name__}: {last_exception}")
+            return f"Error: The TMDB service is currently busy or unavailable. Please try again in a moment."
+        return wrapper
+    return decorator
+
 @tool
+@retry_on_error()
 def search_tmdb_movies(query: str) -> str:
     """
     Search for movies on TMDB based on a text query. 
@@ -79,6 +107,7 @@ def search_tmdb_movies(query: str) -> str:
         return f"Error connecting to TMDB API: {str(e)}"
 
 @tool
+@retry_on_error()
 def get_genre_ids() -> str:
     """
     Get a list of all available movie genres and their IDs on TMDB.
@@ -99,6 +128,7 @@ def get_genre_ids() -> str:
         return f"Error fetching genres: {str(e)}"
 
 @tool
+@retry_on_error()
 def get_keyword_ids(query: str) -> str:
     """
     Search for keyword IDs on TMDB. Keywords are useful for specific vibes like 'cyberpunk', 'dystopia', 'space'.
@@ -121,6 +151,7 @@ def get_keyword_ids(query: str) -> str:
         return f"Error fetching keywords: {str(e)}"
 
 @tool
+@retry_on_error()
 def discover_movies_by_criteria(genre_ids: str = None, keyword_ids: str = None, year: int = None, sort_by: str = "popularity.desc") -> str:
     """
     Discover movies based on advanced criteria like genres, keywords, and release year.
@@ -203,6 +234,7 @@ def discover_movies_by_criteria(genre_ids: str = None, keyword_ids: str = None, 
         return f"Error discovering movies: {str(e)}"
 
 @tool
+@retry_on_error()
 def get_movie_watch_providers(movie_id: int) -> str:
     """
     Get the watch providers (streaming, rent, buy) for a specific movie by its TMDB ID.
@@ -248,6 +280,7 @@ def get_movie_watch_providers(movie_id: int) -> str:
         return f"Error fetching watch providers: {str(e)}"
 
 @tool
+@retry_on_error()
 def get_movie_reviews(movie_id: int) -> str:
     """
     Get a summary of user reviews for a specific movie by its TMDB ID.
