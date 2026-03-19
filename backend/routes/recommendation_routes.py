@@ -34,4 +34,4 @@ def recommend(request: Request, recommend_request: RecommendRequest, current_use
         
     except Exception as e:
         logger.error(f"API Error for {current_user.email}: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="An error occurred while processing your request.")

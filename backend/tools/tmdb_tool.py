@@ -61,7 +61,7 @@ def search_tmdb_movies(query: str) -> str:
     }
 
     try:
-        response = requests.get(endpoint, params=params)
+        response = requests.get(endpoint, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
         
@@ -189,7 +189,7 @@ def discover_movies_by_criteria(genre_ids: str = None, keyword_ids: str = None, 
         params["primary_release_year"] = year
 
     try:
-        response = requests.get(endpoint, params=params)
+        response = requests.get(endpoint, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
         
@@ -250,7 +250,7 @@ def get_movie_watch_providers(movie_id: int, region: str = "US") -> str:
     params = {"api_key": TMDB_API_KEY}
 
     try:
-        response = requests.get(endpoint, params=params)
+        response = requests.get(endpoint, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
         
@@ -302,7 +302,7 @@ def get_movie_reviews(movie_id: int) -> str:
     params = {"api_key": TMDB_API_KEY, "language": "en-US", "page": 1}
 
     try:
-        response = requests.get(endpoint, params=params)
+        response = requests.get(endpoint, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
         

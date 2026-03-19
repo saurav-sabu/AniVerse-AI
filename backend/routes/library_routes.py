@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List
 from backend.database import get_db
 from backend.models.library_model import Watchlist, History
@@ -53,6 +54,20 @@ def remove_from_watchlist(tmdb_id: str, current_user: User = Depends(get_current
 @router.post("/history", response_model=LibraryResponse)
 @limiter.limit("10/minute")
 def add_to_history(request: Request, movie: LibraryCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Check for existing history entry to perform an upsert
+    existing = db.query(History).filter(
+        History.user_id == current_user.id,
+        History.tmdb_id == movie.tmdb_id
+    ).first()
+    
+    if existing:
+        existing.viewed_at = func.now()
+        existing.rating = movie.rating
+        existing.notes = movie.notes
+        db.commit()
+        db.refresh(existing)
+        return existing
+        
     new_entry = History(
         user_id=current_user.id,
         tmdb_id=movie.tmdb_id,
@@ -218,11 +233,15 @@ def get_radar_data(db: Session = Depends(get_db), current_user: User = Depends(g
             
     import math
     import random
+    import hashlib
     
     nodes = []
     for m in all_movies:
-        angle_deg = random.randint(0, 360)
-        radius = 50 + random.random() * 200
+        # Deterministic position based on tmdb_id (Defect 20)
+        seed = int(hashlib.md5(str(m.tmdb_id).encode()).hexdigest(), 16) % (10**9)
+        rng = random.Random(seed)
+        angle_deg = rng.randint(0, 360)
+        radius = 50 + rng.random() * 200
         angle_rad = math.radians(angle_deg)
         
         nodes.append({

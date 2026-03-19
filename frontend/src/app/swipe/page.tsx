@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-mo
 import { fetchWithError, addToWatchlist, addToHistory, getTMDBImageUrl } from '@/lib/api';
 import { ChevronLeft, X, Heart, Info, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface SwipeMovie {
   id: string;
@@ -60,13 +61,15 @@ const MovieCard = ({
         </motion.div>
 
         {movie.poster ? (
-          <img 
+          <Image 
             src={getTMDBImageUrl(movie.poster)} 
             alt={movie.title} 
-            className="w-full h-full object-cover" 
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 400px"
           />
         ) : (
-          <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-zinc-500">No Poster</div>
+          <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-zinc-500 font-bold uppercase tracking-tighter">No Poster</div>
         )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -123,12 +126,8 @@ export default function CineSwipePage() {
         console.error("Failed to add to watchlist", e);
       }
     } else {
-      // Skip -> Add to History (as "skipped" or just seen)
-      try {
-        await addToHistory(movie.id, movie.title, movie.poster);
-      } catch (e) {
-        console.error("Failed to add to history", e);
-      }
+      // Skip -> Just transition to next (no history entry)
+      console.log(`Skipped: ${movie.title}`);
     }
 
     setCurrentIndex(prev => prev + 1);

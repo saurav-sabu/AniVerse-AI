@@ -16,15 +16,7 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
     logger = get_logger(__name__)
     logger.info(f"Registering user: {user.email}")
     
-    # Server-side password complexity validation
-    import re
-    if len(user.password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long.")
-    if not re.search(r"[a-zA-Z]", user.password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one letter.")
-    if not re.search(r"\d", user.password):
-        raise HTTPException(status_code=400, detail="Password must contain at least one number.")
-
+    # Password complexity and length are validated by UserCreate (auth_schema.py)
     try:
         db_user = db.query(User).filter(User.email == user.email).first()
         if db_user:
@@ -60,12 +52,8 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
 
 @router.post("/forgot-password")
 def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == request.email).first()
-    if not user:
-        # We still return success to avoid user enumeration, but we log the miss
-        from backend.utils.logger import get_logger
-        logger = get_logger(__name__)
-        logger.warning(f"Forgot password requested for non-existent email: {request.email}")
-    
-    # In a real app, this would send an email
-    return {"message": "If this email is registered, a password reset link has been sent."}
+    # This feature is placeholder for now as it requires an SMTP/Email configuration
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Password reset is currently disabled. Please contact support."
+    )

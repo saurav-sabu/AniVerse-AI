@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 
 class UserBase(BaseModel):
@@ -7,8 +7,9 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
 
-    @validator('password')
-    def password_strength(cls, v):
+    @field_validator('password')
+    @classmethod
+    def password_strength(cls, v: str) -> str:
         if not any(c.isdigit() for c in v):
             raise ValueError('Password must contain at least one digit')
         if not any(c.isalpha() for c in v):

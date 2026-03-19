@@ -1,4 +1,5 @@
 import os
+import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database import engine, Base
@@ -15,7 +16,6 @@ REQUIRED_ENV_VARS = [
     "TMDB_API_KEY",
     "GROQ_API_KEY",
     "SECRET_KEY",
-    "GOOGLE_API_KEY",
 ]
 
 missing_vars = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]

@@ -12,10 +12,13 @@ if not SQLALCHEMY_DATABASE_URL:
     # Fallback or placeholder for development
     SQLALCHEMY_DATABASE_URL = "sqlite:///./temp_db.db"
 
+engine_kwargs = {}
+if SQLALCHEMY_DATABASE_URL and SQLALCHEMY_DATABASE_URL.startswith("postgresql"):
+    engine_kwargs["pool_pre_ping"] = True
+
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
-    # pool_pre_ping=True is recommended for NeonDB/Postgres to handle connection drops
-    pool_pre_ping=True
+    **engine_kwargs
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -26,7 +29,7 @@ Base = declarative_base()
 def get_db():
     from backend.utils.logger import get_logger
     logger = get_logger(__name__)
-    logger.info("get_db: Initializing session")
+    logger.debug("get_db: Initializing session")
     db = SessionLocal()
     try:
         yield db
@@ -34,5 +37,5 @@ def get_db():
         logger.error(f"get_db: Session error: {e}")
         raise
     finally:
-        logger.info("get_db: Closing session")
+        logger.debug("get_db: Closing session")
         db.close()
