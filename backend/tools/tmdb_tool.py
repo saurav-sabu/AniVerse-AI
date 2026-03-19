@@ -235,15 +235,16 @@ def discover_movies_by_criteria(genre_ids: str = None, keyword_ids: str = None, 
 
 @tool
 @retry_on_error()
-def get_movie_watch_providers(movie_id: int) -> str:
+def get_movie_watch_providers(movie_id: int, region: str = "US") -> str:
     """
     Get the watch providers (streaming, rent, buy) for a specific movie by its TMDB ID.
-    Returns a formatted string of providers available in the US.
+    'region': The ISO 3166-1 country code (e.g., 'US', 'IN', 'GB', 'FR'). Default is 'US'.
+    Returns a formatted string of providers available in the specified region.
     """
     if not TMDB_API_KEY:
         return "Error: TMDB API key is missing."
 
-    logger.info(f"Fetching watch providers for movie ID: {movie_id}")
+    logger.info(f"Fetching watch providers for movie ID: {movie_id} in region: {region}")
     
     endpoint = f"{BASE_URL}/movie/{movie_id}/watch/providers"
     params = {"api_key": TMDB_API_KEY}
@@ -254,26 +255,32 @@ def get_movie_watch_providers(movie_id: int) -> str:
         data = response.json()
         
         results = data.get("results", {})
-        us_providers = results.get("US", {})  # Defaulting to US region
+        region_providers = results.get(region.upper(), {})
         
-        if not us_providers:
-            return "No watch provider information available for this movie in the US."
+        if not region_providers:
+            # Fallback to US if specific region is not found and it's not already US
+            if region.upper() != "US":
+                logger.warning(f"No providers for {region}, falling back to US.")
+                region_providers = results.get("US", {})
+            
+            if not region_providers:
+                return f"No watch provider information available for this movie in {region}."
 
         output = []
         
-        if "flatrate" in us_providers:
-            streaming = [p.get("provider_name", "N/A") for p in us_providers.get("flatrate", [])]
+        if "flatrate" in region_providers:
+            streaming = [p.get("provider_name", "N/A") for p in region_providers.get("flatrate", [])]
             output.append(f"Streaming on: {', '.join(streaming)}")
         
-        if "rent" in us_providers:
-            rent = [p.get("provider_name", "N/A") for p in us_providers.get("rent", [])]
+        if "rent" in region_providers:
+            rent = [p.get("provider_name", "N/A") for p in region_providers.get("rent", [])]
             output.append(f"Available to Rent on: {', '.join(rent)}")
             
-        if "buy" in us_providers:
-            buy = [p.get("provider_name", "N/A") for p in us_providers.get("buy", [])]
+        if "buy" in region_providers:
+            buy = [p.get("provider_name", "N/A") for p in region_providers.get("buy", [])]
             output.append(f"Available to Buy on: {', '.join(buy)}")
 
-        return "\n".join(output) if output else "No common streaming/rental providers found."
+        return f"Region ({region.upper()}):\n" + "\n".join(output) if output else f"No common streaming/rental providers found in {region}."
 
     except requests.exceptions.RequestException as e:
         logger.error(f"TMDB Watch Providers API failed: {e}")

@@ -15,6 +15,16 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
     from backend.utils.logger import get_logger
     logger = get_logger(__name__)
     logger.info(f"Registering user: {user.email}")
+    
+    # Server-side password complexity validation
+    import re
+    if len(user.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters long.")
+    if not re.search(r"[a-zA-Z]", user.password):
+        raise HTTPException(status_code=400, detail="Password must contain at least one letter.")
+    if not re.search(r"\d", user.password):
+        raise HTTPException(status_code=400, detail="Password must contain at least one number.")
+
     try:
         db_user = db.query(User).filter(User.email == user.email).first()
         if db_user:

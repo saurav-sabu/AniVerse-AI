@@ -115,11 +115,15 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
     history = db.query(History).filter(History.user_id == current_user.id).all()
     
     all_movies = watchlist + history
-    if not all_movies:
+    total_count = len(all_movies)
+    
+    if total_count == 0:
         return {
-            "title": "New Cinephile",
-            "description": "Start adding movies to discover your cinematic identity!",
-            "badge": "🎬"
+            "title": "Blank Canvas",
+            "description": "Your cinematic journey is a mystery waiting to be written. Add your first film to begin!",
+            "badge": "🎞️",
+            "watchlist_count": 0,
+            "history_count": 0
         }
     
     # 2. Extract unique movie IDs
@@ -138,13 +142,17 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
                 
     if not genre_tally:
         return {
-            "title": "Explorer",
-            "description": "You're just beginning your journey.",
-            "badge": "🚀"
+            "title": "Curious Newcomer",
+            "description": "You're dipping your toes into the vast ocean of cinema.",
+            "badge": "🌊",
+            "watchlist_count": len(watchlist),
+            "history_count": len(history)
         }
         
     # 4. Map to persona
-    top_genre = genre_tally.most_common(1)[0][0]
+    top_genres = genre_tally.most_common(2)
+    primary_genre = top_genres[0][0]
+    secondary_genre = top_genres[1][0] if len(top_genres) > 1 else None
     
     persona_map = {
         "Action": {"title": "Adrenaline Junkie", "badge": "🔥", "desc": "You live for high-octane thrills and explosive set pieces."},
@@ -155,7 +163,7 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
         "Documentary": {"title": "Knowledge Seeker", "badge": "📖", "desc": "You're always looking for the truth behind the story."},
         "Drama": {"title": "Emotion Architect", "badge": "🎭", "desc": "You possess a deep appreciation for the human condition."},
         "Family": {"title": "Home Hero", "badge": "🏠", "desc": "You value stories that bring everyone together."},
-        "Fantasy": {"title": "Multiverse Voyager", "badge": "✨", "desc": "You're always ready to step into another world."},
+        "Fantasy": {"title": "High-Fantasy Sovereign", "badge": "✨", "desc": "You're always ready to step into another world beyond maps."},
         "History": {"title": "Time Traveler", "badge": "⏳", "desc": "You have a deep respect for the events that shaped our world."},
         "Horror": {"title": "Midnight Dweller", "badge": "👻", "desc": "You find beauty in the shadows and thrill in the unknown."},
         "Music": {"title": "Melody Maker", "badge": "🎵", "desc": "You hear the rhythm in every story."},
@@ -167,7 +175,29 @@ def get_user_persona(current_user: User = Depends(get_current_user), db: Session
         "Western": {"title": "Old Soul", "badge": "🤠", "desc": "You appreciate the rugged tales of the frontier."}
     }
     
-    persona = persona_map.get(top_genre, {"title": "Cinephile", "badge": "🍿", "desc": "A versatile lover of all things cinema."})
+    # Custom "Cold-Start" titles for small libraries
+    if total_count < 3:
+        generic_titles = {
+            "Action": "Rising Hero",
+            "Science Fiction": "Junior Voyager",
+            "Horror": "Shadow Seekers",
+            "Drama": "Heartfelt Observer",
+            "Comedy": "Cheerful Scout"
+        }
+        title = generic_titles.get(primary_genre, f"Emerging {primary_genre} Fan")
+        persona = {
+            "title": title,
+            "badge": "🌱",
+            "desc": f"Your interest in {primary_genre} is just the beginning of a great story."
+        }
+    else:
+        # Check for special combos if secondary genre exists
+        if primary_genre == "Science Fiction" and secondary_genre == "Action":
+             persona = {"title": "Cyberpunk Renegade", "badge": "📟", "desc": "You love high-tech, low-life stories with plenty of action."}
+        elif primary_genre == "Horror" and secondary_genre == "Thriller":
+             persona = {"title": "Scream Strategist", "badge": "🔪", "desc": "You have a refined taste for suspenseful scares and sharp twists."}
+        else:
+            persona = persona_map.get(primary_genre, {"title": "Cinephile", "badge": "🍿", "desc": "A versatile lover of all things cinema."})
     
     return {
         **persona,
