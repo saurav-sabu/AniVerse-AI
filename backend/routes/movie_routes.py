@@ -10,7 +10,7 @@ router = APIRouter(prefix="/movies", tags=["movies"])
 
 @router.get("/trailer/{tmdb_id}")
 @limiter.limit("15/minute")
-async def fetch_trailer(request: Request, tmdb_id: int, current_user: User = Depends(get_current_user)):
+def fetch_trailer(request: Request, tmdb_id: int, current_user: User = Depends(get_current_user)):
     """
     Fetch the YouTube trailer key for a given movie.
     """

@@ -30,8 +30,7 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-class TokenData(BaseModel):
-    email: Optional[str] = None
+# TokenData removed as it was unused
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr

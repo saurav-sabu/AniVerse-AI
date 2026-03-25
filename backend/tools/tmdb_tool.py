@@ -10,7 +10,6 @@ logger = get_logger(__name__)
 import time
 import functools
 
-TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 BASE_URL = "https://api.themoviedb.org/3"
 
 def retry_on_error(max_retries=3, initial_delay=1):
@@ -45,6 +44,7 @@ def search_tmdb_movies(query: str) -> str:
     USE THIS FOR: Specific titles (e.g., 'Inception', 'The Matrix').
     AVOID THIS FOR: Vibe-based or genre-based discoveries (e.g., 'scary sci-fi', 'neon cyberpunk'). Use 'discover_movies_by_criteria' instead for those.
     """
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     if not TMDB_API_KEY:
         logger.error("TMDB_API_KEY not found in environment variables.")
         return "Error: TMDB API key is missing. Please configure it in the .env file."
@@ -113,6 +113,8 @@ def get_genre_ids() -> str:
     Get a list of all available movie genres and their IDs on TMDB.
     Useful before calling 'discover_movies_by_criteria'.
     """
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     if not TMDB_API_KEY:
         return "Error: TMDB API key is missing."
     
@@ -134,6 +136,7 @@ def get_keyword_ids(query: str) -> str:
     Search for keyword IDs on TMDB. Keywords are useful for specific vibes like 'cyberpunk', 'dystopia', 'space'.
     Returns a list of matching keywords and their IDs.
     """
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     if not TMDB_API_KEY:
         return "Error: TMDB API key is missing."
     
@@ -161,6 +164,7 @@ def discover_movies_by_criteria(genre_ids: str = None, keyword_ids: str = None, 
     'sort_by': Sorting criteria, e.g., 'popularity.desc', 'vote_average.desc', 'primary_release_date.desc'.
     Returns a formatted list of recommended movies.
     """
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     if not TMDB_API_KEY:
         return "Error: TMDB API key is missing."
 
@@ -241,6 +245,7 @@ def get_movie_watch_providers(movie_id: int, region: str = "US") -> str:
     'region': The ISO 3166-1 country code (e.g., 'US', 'IN', 'GB', 'FR'). Default is 'US'.
     Returns a formatted string of providers available in the specified region.
     """
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     if not TMDB_API_KEY:
         return "Error: TMDB API key is missing."
 
@@ -293,6 +298,7 @@ def get_movie_reviews(movie_id: int) -> str:
     Get a summary of user reviews for a specific movie by its TMDB ID.
     Returns a formatted string containing snippets from top reviews to help understand the 'vibe'.
     """
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     if not TMDB_API_KEY:
         return "Error: TMDB API key is missing."
 
@@ -337,6 +343,7 @@ def get_movie_trailer(movie_id: int) -> str:
     Get the YouTube video ID for the official trailer of a movie by its TMDB ID.
     Returns the YouTube key (e.g., 'dQw4w9WgXcQ') or a message if none found.
     """
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     if not TMDB_API_KEY:
         return "Error: TMDB API key is missing."
 
@@ -346,7 +353,7 @@ def get_movie_trailer(movie_id: int) -> str:
     params = {"api_key": TMDB_API_KEY, "language": "en-US"}
 
     try:
-        response = requests.get(endpoint, params=params)
+        response = requests.get(endpoint, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
         
@@ -370,6 +377,7 @@ def get_movie_details(movie_id: int) -> dict:
     Get detailed information for a specific movie by its TMDB ID, including genres.
     Returns a dictionary of movie details.
     """
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     if not TMDB_API_KEY:
         return {"error": "TMDB API key is missing."}
 
@@ -379,7 +387,7 @@ def get_movie_details(movie_id: int) -> dict:
     params = {"api_key": TMDB_API_KEY, "language": "en-US"}
 
     try:
-        response = requests.get(endpoint, params=params)
+        response = requests.get(endpoint, params=params, timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:

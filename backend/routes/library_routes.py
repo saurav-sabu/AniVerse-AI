@@ -23,16 +23,29 @@ def add_to_watchlist(request: Request, movie: LibraryCreate, current_user: User 
     if existing:
         return existing
     
-    new_entry = Watchlist(
-        user_id=current_user.id,
-        tmdb_id=movie.tmdb_id,
-        title=movie.title,
-        poster_path=movie.poster_path
-    )
-    db.add(new_entry)
-    db.commit()
-    db.refresh(new_entry)
-    return new_entry
+    try:
+        new_entry = Watchlist(
+            user_id=current_user.id,
+            tmdb_id=movie.tmdb_id,
+            title=movie.title,
+            poster_path=movie.poster_path
+        )
+        db.add(new_entry)
+        db.commit()
+        db.refresh(new_entry)
+        return new_entry
+    except Exception as e:
+        db.rollback()
+        # Check if it was a duplicate entry (race condition)
+        existing = db.query(Watchlist).filter(
+            Watchlist.user_id == current_user.id,
+            Watchlist.tmdb_id == movie.tmdb_id
+        ).first()
+        if existing:
+            return existing
+            
+        logger.error(f"Failed to add to watchlist: {e}")
+        raise HTTPException(status_code=500, detail="Failed to add to watchlist")
 
 @router.get("/watchlist", response_model=List[LibraryResponse])
 def get_watchlist(skip: int = 0, limit: int = 50, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -47,9 +60,14 @@ def remove_from_watchlist(tmdb_id: str, current_user: User = Depends(get_current
     if not entry:
         raise HTTPException(status_code=404, detail="Movie not found in watchlist")
     
-    db.delete(entry)
-    db.commit()
-    return {"message": "Removed from watchlist"}
+    try:
+        db.delete(entry)
+        db.commit()
+        return {"message": "Removed from watchlist"}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to remove from watchlist: {e}")
+        raise HTTPException(status_code=500, detail="Failed to remove from watchlist")
 
 @router.post("/history", response_model=LibraryResponse)
 @limiter.limit("10/minute")
@@ -68,18 +86,23 @@ def add_to_history(request: Request, movie: LibraryCreate, current_user: User = 
         db.refresh(existing)
         return existing
         
-    new_entry = History(
-        user_id=current_user.id,
-        tmdb_id=movie.tmdb_id,
-        title=movie.title,
-        poster_path=movie.poster_path,
-        rating=movie.rating,
-        notes=movie.notes
-    )
-    db.add(new_entry)
-    db.commit()
-    db.refresh(new_entry)
-    return new_entry
+    try:
+        new_entry = History(
+            user_id=current_user.id,
+            tmdb_id=movie.tmdb_id,
+            title=movie.title,
+            poster_path=movie.poster_path,
+            rating=movie.rating,
+            notes=movie.notes
+        )
+        db.add(new_entry)
+        db.commit()
+        db.refresh(new_entry)
+        return new_entry
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to add to history: {e}")
+        raise HTTPException(status_code=500, detail="An error occurred while adding to history")
 
 @router.patch("/history/{tmdb_id}", response_model=LibraryResponse)
 @limiter.limit("10/minute")
@@ -92,14 +115,19 @@ def update_history_entry(request: Request, tmdb_id: str, update: HistoryUpdate, 
     if not entry:
         raise HTTPException(status_code=404, detail="Movie history entry not found")
     
-    if update.rating is not None:
-        entry.rating = update.rating
-    if update.notes is not None:
-        entry.notes = update.notes
-        
-    db.commit()
-    db.refresh(entry)
-    return entry
+    try:
+        if update.rating is not None:
+            entry.rating = update.rating
+        if update.notes is not None:
+            entry.notes = update.notes
+            
+        db.commit()
+        db.refresh(entry)
+        return entry
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to update history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update history entry")
 
 from backend.utils.journal_analyzer import generate_journal_summary
 
@@ -124,7 +152,8 @@ def get_cached_movie_details(movie_id: int):
     return get_movie_details(movie_id)
 
 @router.get("/persona")
-def get_user_persona(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def get_user_persona(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # 1. Get all library items
     watchlist = db.query(Watchlist).filter(Watchlist.user_id == current_user.id).all()
     history = db.query(History).filter(History.user_id == current_user.id).all()

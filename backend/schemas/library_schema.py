@@ -7,14 +7,14 @@ class LibraryBase(BaseModel):
     title: str
     poster_path: Optional[str] = None
     rating: Optional[int] = Field(None, ge=1, le=5)
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=2000)
 
 class LibraryCreate(LibraryBase):
     pass
 
 class HistoryUpdate(BaseModel):
     rating: Optional[int] = Field(None, ge=1, le=5)
-    notes: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=2000)
 
 class LibraryResponse(LibraryBase):
     id: int

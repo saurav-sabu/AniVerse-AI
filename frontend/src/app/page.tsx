@@ -58,12 +58,12 @@ export default function Home() {
     }
   }, [router]);
 
-  // Auto-scroll to bottom of chat
+  // Combined auto-scroll logic
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
   const fetchPersona = async () => {
     try {
@@ -78,7 +78,7 @@ export default function Home() {
     try {
       const data = await getWatchlist();
       setWatchlist(data);
-      fetchPersona(); // Refresh persona when watchlist changes
+      await fetchPersona(); // Refresh persona when watchlist changes
     } catch (e) {
       console.error("Failed to fetch watchlist", e);
     }
@@ -123,13 +123,6 @@ export default function Home() {
     }
   };
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isLoading]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -153,7 +146,7 @@ export default function Home() {
     try {
       setError(null);
       // Pass the previous messages as history. The current input is handled separately by the backend.
-      const response = await getRecommendation(input, messages);
+      const response = await getRecommendation(input, messages, controller.signal);
       const assistantMessage: Message = { 
         id: (Date.now() + 1).toString(),
         role: 'assistant', 

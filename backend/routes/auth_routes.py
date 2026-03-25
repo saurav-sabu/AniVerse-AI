@@ -51,7 +51,8 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/forgot-password")
-def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     # This feature is placeholder for now as it requires an SMTP/Email configuration
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,

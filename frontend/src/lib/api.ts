@@ -135,7 +135,7 @@ export async function forgotPassword(email: string): Promise<string> {
     return data.message;
 }
 
-export async function getRecommendation(query: string, history: Message[]): Promise<string> {
+export async function getRecommendation(query: string, history: Message[], signal?: AbortSignal): Promise<string> {
     const token = getAuthToken();
     if (!token) {
         throw new Error('Unauthorized');
@@ -144,6 +144,7 @@ export async function getRecommendation(query: string, history: Message[]): Prom
     try {
         const response = await fetch(`${API_BASE_URL}/recommend`, {
             method: 'POST',
+            signal,
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`

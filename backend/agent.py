@@ -53,11 +53,20 @@ def initialize_agent():
         logger.error(f"Failed to initialize agent: {e}")
         raise
 
-# Initialize the agent once at module level
-try:
-    AGENT = initialize_agent()
-except Exception:
-    AGENT = None
+# Singleton for the agent
+_AGENT = None
+
+def get_agent():
+    """
+    Lazy initialization of the agent.
+    """
+    global _AGENT
+    if _AGENT is None:
+        try:
+            _AGENT = initialize_agent()
+        except Exception as e:
+            logger.error(f"Lazy agent initialization failed: {e}")
+    return _AGENT
 
 def get_movie_recommendation(user_query: str, history: list = None, user_context: dict = None):
     """
@@ -65,16 +74,10 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
     Accepts an optional 'history' list of (role, content) tuples.
     'user_context' can include email for tool usage.
     """
-    if user_context and 'email' in user_context:
-        # Hardening: Use clear delimiters and instructions to prevent injection
-        context_block = f"\n=== USER CONTEXT ===\nEmail: {user_context['email']}\n====================\n\n"
-        user_query = context_block + user_query
-
-    if not AGENT:
+    agent = get_agent()
+    if not agent:
         logger.error("Agent not initialized. Check GROQ_API_KEY.")
         return "I'm sorry, I'm currently unable to assist. Please verify my configuration."
-
-    agent = AGENT
     logger.info(f"Processing query through agent: {user_query}")
     
     # Retry logic for the agent invocation to handle rate limits (429)

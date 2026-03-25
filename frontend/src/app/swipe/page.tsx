@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { fetchWithError, addToWatchlist, addToHistory, getTMDBImageUrl } from '@/lib/api';
-import { ChevronLeft, X, Heart, Info, ArrowLeft, Sparkles } from 'lucide-react';
+import { X, Heart, Info, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 interface SwipeMovie {
   id: string;
@@ -93,10 +94,12 @@ export default function CineSwipePage() {
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  const router = useRouter();
+
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('cinesync_token') : null;
     if (!token) {
-      window.location.href = '/login';
+      router.push('/login');
       return;
     }
 
