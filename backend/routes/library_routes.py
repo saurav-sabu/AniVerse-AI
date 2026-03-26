@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from typing import List
 from backend.database import get_db
 from backend.models.library_model import Watchlist, History
 from backend.schemas.library_schema import LibraryCreate, LibraryResponse, HistoryUpdate
 from backend.auth.get_user import get_current_user
+from backend.utils.logger import get_logger
+
+logger = get_logger(__name__)
 from backend.models.user_model import User
 from backend.utils.rate_limit import limiter
 from fastapi import Request

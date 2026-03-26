@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Film, Mail, Lock, UserPlus, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Film, Mail, Lock, UserPlus, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { registerUser } from '@/lib/api';
 import { useRouter } from 'next/navigation';

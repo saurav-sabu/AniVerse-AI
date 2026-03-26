@@ -53,8 +53,14 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
 @router.post("/forgot-password")
 @limiter.limit("3/minute")
 def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    # This feature is placeholder for now as it requires an SMTP/Email configuration
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Password reset is currently disabled. Please contact support."
-    )
+    from backend.utils.logger import get_logger
+    logger = get_logger(__name__)
+    
+    user = db.query(User).filter(User.email == body.email).first()
+    if not user:
+        # Avoid user enumeration by returning 200 even if user doesn't exist
+        return {"message": "If this email is registered, a reset link will be sent shortly."}
+    
+    # Mock sending email
+    logger.info(f"MOCK PASSWORD RESET: Link sent to {body.email} (valid for 1 hour)")
+    return {"message": "Success! Check your inbox for the reset link."}

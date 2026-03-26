@@ -1,3 +1,5 @@
+'use client';
+
 interface Mood {
   label: string;
   color: string;

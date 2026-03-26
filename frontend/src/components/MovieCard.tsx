@@ -1,14 +1,11 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Play, Check, Plus, Book } from 'lucide-react';
+'use client';
+
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Play, Check, Plus, Book, Share2, Sparkles, Eye, Star, Archive } from 'lucide-react';
 import Image from 'next/image';
 import { getTMDBImageUrl } from '@/lib/api';
-import { twMerge } from 'tailwind-merge';
-import { clsx, type ClassValue } from 'clsx';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from '@/lib/utils';
 
 export interface MovieMetadata {
   id: string;

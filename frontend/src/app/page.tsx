@@ -102,7 +102,7 @@ export default function Home() {
         setWatchlist(prev => prev.filter(m => String(m.tmdb_id) !== tmdb_id));
       }
       setIsJournalOpen(true); // Open journal to show the new entry
-      fetchPersona(); // Refresh persona
+      await fetchPersona(); // Refresh persona
     } catch (e) {
       console.error("Mark watched failed", e);
     }
@@ -422,6 +422,7 @@ export default function Home() {
             onClick={clearHistory}
             className="p-2.5 transition-all rounded-xl hover:bg-white/5 text-white/40 hover:text-white"
             title="Clear Chat"
+            aria-label="Clear chat history"
           >
             <Trash2 className="w-5 h-5" />
           </button>
@@ -431,6 +432,7 @@ export default function Home() {
           <button
             onClick={() => logout()}
             className="flex items-center gap-2.5 px-5 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-pink/50 hover:bg-brand-pink/5"
+            aria-label="Logout"
           >
             <LogOut className="w-4 h-4 text-brand-pink" />
             <span className="text-sm font-bold">Logout</span>

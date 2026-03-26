@@ -114,7 +114,6 @@ def get_genre_ids() -> str:
     Useful before calling 'discover_movies_by_criteria'.
     """
     TMDB_API_KEY = os.getenv("TMDB_API_KEY")
-    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     if not TMDB_API_KEY:
         return "Error: TMDB API key is missing."
     

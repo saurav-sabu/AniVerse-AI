@@ -1,3 +1,5 @@
+'use client';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { Film, Archive, X, Play, Book, Trash2 } from 'lucide-react';
 import Image from 'next/image';
