@@ -3,7 +3,7 @@ import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database import engine, Base
-from backend.routes import auth_routes, recommendation_routes, library_routes, movie_routes
+from backend.routes import auth_routes, recommendation_routes, library_routes, movie_routes, user_routes, friend_routes
 from backend.utils.logger import get_logger
 from backend.utils.rate_limit import limiter
 from slowapi import _rate_limit_exceeded_handler
@@ -51,6 +51,8 @@ app.include_router(auth_routes.router)
 app.include_router(recommendation_routes.router)
 app.include_router(library_routes.router)
 app.include_router(movie_routes.router)
+app.include_router(user_routes.router)
+app.include_router(friend_routes.router)
 
 @app.get("/health")
 async def health():

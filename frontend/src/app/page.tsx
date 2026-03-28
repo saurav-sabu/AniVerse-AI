@@ -19,6 +19,8 @@ import { MovieCard, type MovieMetadata } from '@/components/MovieCard';
 import { TrailerModal } from '@/components/TrailerModal';
 import { VaultDrawer } from '@/components/VaultDrawer';
 import { MoodBar } from '@/components/MoodBar';
+import { FriendsDrawer } from '@/components/FriendsDrawer';
+import { Users } from 'lucide-react';
 
 
 export default function Home() {
@@ -36,6 +38,7 @@ export default function Home() {
   const [themeColor, setThemeColor] = useState('#ec4899'); // Default pink
   const [isRadarOpen, setIsRadarOpen] = useState(false);
   const [isJournalOpen, setIsJournalOpen] = useState(false);
+  const [isFriendsOpen, setIsFriendsOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -74,6 +77,7 @@ export default function Home() {
         setIsPersonaCardOpen(false);
         setIsRadarOpen(false);
         setIsJournalOpen(false);
+        setIsFriendsOpen(false);
         setSelectedTrailer(null);
         setTrailerKey(null);
       }
@@ -501,6 +505,17 @@ export default function Home() {
           <div className="h-6 w-[1px] bg-white/10 mx-1" />
 
           <button
+            onClick={() => setIsFriendsOpen(true)}
+            className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-purple/50 hover:bg-brand-purple/5"
+            title="Cinema Circle"
+          >
+            <Users className="w-4 h-4 text-brand-purple" />
+            <span className="text-sm font-bold hidden sm:inline">Friends</span>
+          </button>
+
+          <div className="h-6 w-[1px] bg-white/10 mx-1" />
+
+          <button
             id="tour-universe"
             onClick={() => setIsRadarOpen(true)}
             className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-purple/50 hover:bg-brand-purple/5"
@@ -778,6 +793,8 @@ export default function Home() {
       </AnimatePresence>
 
       <JournalDrawer isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} />
+      
+      <FriendsDrawer isOpen={isFriendsOpen} onClose={() => setIsFriendsOpen(false)} />
       
       {showTour && (
         <OnboardingTour onComplete={() => {

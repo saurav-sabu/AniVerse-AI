@@ -225,3 +225,87 @@ export async function getMovieTrailer(tmdb_id: string): Promise<string> {
 export async function getPersona(): Promise<{ title: string, badge: string, desc: string, watchlist_count: number, history_count: number }> {
     return fetchWithError('/library/persona');
 }
+
+export async function exportWatchlist(): Promise<void> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Unauthorized');
+
+    const response = await fetch(`${API_BASE_URL}/recommend/export-watchlist`, {
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!response.ok) throw new Error('Export failed');
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'aniverse-vault.json';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
+// --- Social API ---
+
+export interface UserPublic {
+    id: number;
+    email: string;
+}
+
+export interface FriendshipRequest {
+    id: number;
+    user_id: number;
+    friend_id: number;
+    status: string;
+    created_at: string;
+    sender_email?: string;
+}
+
+export interface FriendProfile {
+    id: number;
+    email: string;
+    status: string;
+}
+
+export async function searchUsers(q: string): Promise<UserPublic[]> {
+    return fetchWithError(`/users/search?q=${encodeURIComponent(q)}`);
+}
+
+export async function sendFriendRequest(friendId: number): Promise<FriendshipRequest> {
+    return fetchWithError(`/friends/request/${friendId}`, {
+        method: 'POST'
+    });
+}
+
+export async function getPendingRequests(): Promise<FriendshipRequest[]> {
+    return fetchWithError('/friends/requests/pending');
+}
+
+export async function acceptFriendRequest(requestId: number): Promise<{ message: string }> {
+    return fetchWithError(`/friends/requests/${requestId}/accept`, {
+        method: 'POST'
+    });
+}
+
+export async function rejectFriendRequest(requestId: number): Promise<{ message: string }> {
+    return fetchWithError(`/friends/requests/${requestId}/reject`, {
+        method: 'POST'
+    });
+}
+
+export async function getFriendList(): Promise<FriendProfile[]> {
+    return fetchWithError('/friends/list');
+}
+
+export async function getFriendLibrary(friendId: number): Promise<{ 
+    watchlist: any[], 
+    history: any[], 
+    persona: { title: string, badge: string, desc: string, watchlist_count: number, history_count: number },
+    profile: UserPublic 
+}> {
+    return fetchWithError(`/friends/${friendId}/library`);
+}
