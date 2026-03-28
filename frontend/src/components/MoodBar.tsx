@@ -16,9 +16,7 @@ export const MoodBar = ({ onMoodSelect }: MoodBarProps) => {
     { label: 'Cyberpunk', color: '#00f2ff', icon: '🤖', prompt: 'I want some neon-soaked cyberpunk recommendations.' },
     { label: 'Neon Noir', color: '#ff00ff', icon: '🌃', prompt: 'Show me some moody neon noir masterpieces.' },
     { label: 'Cozy', color: '#fbbf24', icon: '☕', prompt: 'Give me something cozy and heartwarming.' },
-    { label: 'High Octane', color: '#ef4444', icon: '🏎️', prompt: 'I need high-octane action and adrenaline.' },
-    { label: 'Mind-Bending', color: '#8b5cf6', icon: '🌀', prompt: 'Recommend some mind-bending sci-fi.' },
-    { label: 'Classic', color: '#9ca3af', icon: '🎞️', prompt: 'Show me some black and white classics.' }
+    { label: 'High Octane', color: '#ef4444', icon: '🏎️', prompt: 'I need high-octane action and adrenaline.' }
   ];
 
   return (
