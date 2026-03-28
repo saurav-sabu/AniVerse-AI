@@ -115,7 +115,16 @@ export default function CineSwipePage() {
       }
     };
     loadDeck();
-  }, []);
+  }, [router]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') handleSwipe('left');
+      if (e.key === 'ArrowRight') handleSwipe('right');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, deck]);
 
   const handleSwipe = async (direction: 'left' | 'right') => {
     if (!deck || deck.length === 0 || currentIndex >= deck.length) return;
@@ -210,6 +219,7 @@ export default function CineSwipePage() {
         <button 
           onClick={() => handleSwipe('left')}
           disabled={currentIndex >= deck.length}
+          aria-label="Skip movie"
           className="p-6 rounded-full bg-white/5 border border-white/10 text-red-500 hover:bg-red-500/10 hover:border-red-500/50 transition-all disabled:opacity-20"
         >
           <X size={32} />
@@ -217,6 +227,7 @@ export default function CineSwipePage() {
         <button 
           onClick={() => handleSwipe('right')}
           disabled={currentIndex >= deck.length}
+          aria-label="Save to watchlist"
           className="p-6 rounded-full bg-white/5 border border-white/10 text-brand-pink hover:bg-brand-pink/10 hover:border-brand-pink/50 transition-all disabled:opacity-20 shadow-2xl shadow-brand-pink/10"
         >
           <Heart size={32} />

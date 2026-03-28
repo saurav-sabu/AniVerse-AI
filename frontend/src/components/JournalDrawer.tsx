@@ -87,6 +87,9 @@ export const JournalDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: (
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Cinematic Journal"
             className="fixed top-0 right-0 z-[90] h-full w-full max-w-lg glass border-l border-white/10 shadow-2xl flex flex-col"
           >
             <div className="p-6 border-b border-white/10 flex items-center justify-between bg-black/20">
@@ -96,7 +99,11 @@ export const JournalDrawer = ({ isOpen, onClose }: { isOpen: boolean, onClose: (
                 </div>
                 <h2 className="text-xl font-black tracking-tight text-white uppercase">Cinematic Journal</h2>
               </div>
-              <button onClick={onClose} className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors">
+              <button 
+                onClick={onClose}
+                aria-label="Close Journal"
+                className="p-2 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors"
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>

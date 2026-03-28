@@ -23,12 +23,21 @@ export const TrailerModal = ({ movie, trailerKey, onClose }: TrailerModalProps) 
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 20 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="relative w-full max-w-4xl aspect-video rounded-3xl overflow-hidden glass border border-white/10 shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${movie.title} trailer`}
+          className="relative w-full max-w-4xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/10"
         >
+          <button 
+            onClick={onClose}
+            aria-label="Close trailer"
+            className="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/50 text-white/70 hover:text-white transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
           <div className="absolute top-0 left-0 right-0 p-6 z-10 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-brand-pink/20">
@@ -38,6 +47,7 @@ export const TrailerModal = ({ movie, trailerKey, onClose }: TrailerModalProps) 
             </div>
             <button 
               onClick={onClose}
+              aria-label="Close trailer header"
               className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
             >
               <X className="w-6 h-6" />
