@@ -172,6 +172,11 @@ export async function getRecommendation(query: string, history: Message[], signa
         throw error;
     }
 }
+
+export async function getSurpriseRecommendation(): Promise<string> {
+    const data = await fetchWithError('/recommend/surprise');
+    return data.response;
+}
 export async function addToWatchlist(tmdb_id: string, title: string, poster_path: string): Promise<void> {
     await fetchWithError('/library/watchlist', {
         method: 'POST',

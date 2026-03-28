@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, Plus, Check, Mic, MicOff, Play, X, Archive, Share2, Radar } from 'lucide-react';
+import { Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, Plus, Check, Mic, MicOff, Play, X, Archive, Share2, Radar, Dice5 } from 'lucide-react';
 import Link from 'next/link';
-import { getRecommendation, Message, getAuthToken, logout, addToWatchlist, removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, getPersona, getTMDBImageUrl } from '@/lib/api';
+import { getRecommendation, Message, getAuthToken, logout, addToWatchlist, removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, getPersona, getTMDBImageUrl, getSurpriseRecommendation } from '@/lib/api';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -120,6 +120,26 @@ export default function Home() {
       }
     } catch (e) {
       console.error("Watchlist toggle error", e);
+    }
+  };
+
+  const handleSurpriseMe = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await getSurpriseRecommendation();
+      const assistantMessage: Message = { 
+        id: Date.now().toString(),
+        role: 'assistant', 
+        content: response 
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err: any) {
+      console.error("Surprise Me failed", err);
+      setError(err.message || "Failed to find a surprise for you.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -405,6 +425,21 @@ export default function Home() {
               </div>
             </motion.div>
           )}
+
+          <button
+            onClick={handleSurpriseMe}
+            disabled={isLoading}
+            className={cn(
+              "flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-purple/50 hover:bg-brand-purple/5",
+              isLoading && "opacity-50 cursor-not-allowed"
+            )}
+            title="Surprise Me"
+          >
+            <Dice5 className={cn("w-4 h-4 text-brand-purple", isLoading && "animate-spin")} />
+            <span className="text-sm font-bold hidden sm:inline">Surprise Me</span>
+          </button>
+
+          <div className="h-6 w-[1px] bg-white/10 mx-1" />
 
           <button
             id="tour-vault"
