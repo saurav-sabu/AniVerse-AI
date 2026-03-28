@@ -121,6 +121,7 @@ export default function CineSwipePage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') handleSwipe('left');
       if (e.key === 'ArrowRight') handleSwipe('right');
+      if (e.key === 'Escape') router.push('/');
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);

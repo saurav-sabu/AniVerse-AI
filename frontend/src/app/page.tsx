@@ -38,6 +38,7 @@ export default function Home() {
   const [isJournalOpen, setIsJournalOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   // Auth & Data fetch
@@ -57,6 +58,30 @@ export default function Home() {
       }
     }
   }, [router]);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Focus search with '/'
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+
+      // 2. Close all modals with 'Escape'
+      if (e.key === 'Escape') {
+        setIsVaultOpen(false);
+        setIsPersonaCardOpen(false);
+        setIsRadarOpen(false);
+        setIsJournalOpen(false);
+        setSelectedTrailer(null);
+        setTrailerKey(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Combined auto-scroll logic
   useEffect(() => {
@@ -674,6 +699,7 @@ export default function Home() {
             </div>
 
             <input
+              ref={inputRef}
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
