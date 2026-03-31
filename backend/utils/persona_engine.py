@@ -20,7 +20,7 @@ def calculate_persona(db: Session, user_id: int):
     if total_count == 0:
         return {
             "title": "Blank Canvas",
-            "description": "Your cinematic journey is a mystery waiting to be written. Add your first film to begin!",
+            "desc": "Your cinematic journey is a mystery waiting to be written. Add your first film to begin!",
             "badge": "🎞️",
             "watchlist_count": 0,
             "history_count": 0
@@ -43,7 +43,7 @@ def calculate_persona(db: Session, user_id: int):
     if not genre_tally:
         return {
             "title": "Curious Newcomer",
-            "description": "You're dipping your toes into the vast ocean of cinema.",
+            "desc": "You're dipping your toes into the vast ocean of cinema.",
             "badge": "🌊",
             "watchlist_count": len(watchlist),
             "history_count": len(history)

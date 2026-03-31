@@ -2,25 +2,28 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, Plus, Check, Mic, MicOff, Play, X, Archive, Share2, Radar, Dice5 } from 'lucide-react';
+import { 
+  Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, 
+  Plus, Check, Mic, MicOff, Play, X, Archive, Share2, Radar, 
+  Dice5, Library, Users, Book, HelpCircle 
+} from 'lucide-react';
 import Link from 'next/link';
-import { getRecommendation, Message, getAuthToken, logout, addToWatchlist, removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, getPersona, getTMDBImageUrl, getSurpriseRecommendation } from '@/lib/api';
+import { 
+  getRecommendation, Message, getAuthToken, logout, addToWatchlist, 
+  removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, 
+  getPersona, getTMDBImageUrl, getSurpriseRecommendation 
+} from '@/lib/api';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
-import { PersonaCard } from '@/components/PersonaCard';
-import VibeRadar from '@/components/VibeRadar';
-import { JournalDrawer } from '@/components/JournalDrawer';
-import { Book, HelpCircle } from 'lucide-react';
-import { OnboardingTour } from '@/components/OnboardingTour';
-
 import { MovieCard, type MovieMetadata } from '@/components/MovieCard';
 import { TrailerModal } from '@/components/TrailerModal';
-import { VaultDrawer } from '@/components/VaultDrawer';
+import { CineHubDrawer, type HubTab } from '@/components/CineHubDrawer';
 import { MoodBar } from '@/components/MoodBar';
-import { FriendsDrawer } from '@/components/FriendsDrawer';
-import { Users } from 'lucide-react';
+import { PersonaCard } from '@/components/PersonaCard';
+import VibeRadar from '@/components/VibeRadar';
+import { OnboardingTour } from '@/components/OnboardingTour';
 
 
 export default function Home() {
@@ -32,13 +35,12 @@ export default function Home() {
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [selectedTrailer, setSelectedTrailer] = useState<MovieMetadata | null>(null);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
-  const [isVaultOpen, setIsVaultOpen] = useState(false);
-  const [persona, setPersona] = useState<{ title: string, badge: string, desc: string, watchlist_count: number, history_count: number } | null>(null);
-  const [isPersonaCardOpen, setIsPersonaCardOpen] = useState(false);
-  const [themeColor, setThemeColor] = useState('#ec4899'); // Default pink
   const [isRadarOpen, setIsRadarOpen] = useState(false);
-  const [isJournalOpen, setIsJournalOpen] = useState(false);
-  const [isFriendsOpen, setIsFriendsOpen] = useState(false);
+  const [isPersonaCardOpen, setIsPersonaCardOpen] = useState(false);
+  const [persona, setPersona] = useState<{ title: string, badge: string, desc: string, watchlist_count: number, history_count: number } | null>(null);
+  const [themeColor, setThemeColor] = useState('#ec4899'); 
+  const [isHubOpen, setIsHubOpen] = useState(false);
+  const [hubTab, setHubTab] = useState<HubTab>('vault');
   const [showTour, setShowTour] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -73,11 +75,9 @@ export default function Home() {
 
       // 2. Close all modals with 'Escape'
       if (e.key === 'Escape') {
-        setIsVaultOpen(false);
+        setIsHubOpen(false);
         setIsPersonaCardOpen(false);
         setIsRadarOpen(false);
-        setIsJournalOpen(false);
-        setIsFriendsOpen(false);
         setSelectedTrailer(null);
         setTrailerKey(null);
       }
@@ -130,7 +130,8 @@ export default function Home() {
         await removeFromWatchlist(tmdb_id);
         setWatchlist(prev => prev.filter(m => String(m.tmdb_id) !== tmdb_id));
       }
-      setIsJournalOpen(true); // Open journal to show the new entry
+      setHubTab('history');
+      setIsHubOpen(true); // Open hub to show the new journal entry
       await fetchPersona(); // Refresh persona
     } catch (e) {
       console.error("Mark watched failed", e);
@@ -423,7 +424,6 @@ export default function Home() {
         className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-brand-purple rounded-full blur-[150px] pointer-events-none"
       />
 
-      {/* Header */}
       <header className="z-30 flex items-center justify-between px-6 py-4 glass border-b border-white/10">
         <motion.div
           id="tour-header"
@@ -437,15 +437,13 @@ export default function Home() {
           <h1 className="text-2xl font-black tracking-tight text-gradient uppercase">CineSync AI</h1>
         </motion.div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {persona && (
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="hidden lg:flex items-center gap-2 pr-1 pl-3 py-1 rounded-full bg-white/5 border border-white/10 group/persona cursor-pointer hover:bg-white/10 transition-colors"
-              id="tour-persona"
+              className="hidden xl:flex items-center gap-2 pr-1 pl-3 py-1 rounded-full bg-white/5 border border-white/10 group/persona cursor-pointer hover:bg-white/10 transition-colors"
               onClick={() => setIsPersonaCardOpen(true)}
-              title="Share your cinematic identity"
             >
               <span className="text-lg">{persona.badge}</span>
               <span className="text-[10px] font-black uppercase tracking-wider text-white/60">{persona.title}</span>
@@ -455,106 +453,68 @@ export default function Home() {
             </motion.div>
           )}
 
+          <div className="hidden lg:flex items-center gap-2">
+            <button
+              onClick={handleSurpriseMe}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl glass border border-white/10 text-white/60 hover:text-white hover:border-brand-purple/50 transition-all"
+            >
+              <Dice5 className={cn("w-4 h-4 text-brand-purple", isLoading && "animate-spin")} />
+              <span className="text-[10px] font-black uppercase">Surprise</span>
+            </button>
+
+            <Link
+              href="/swipe"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl glass border border-white/10 text-white/60 hover:text-white hover:border-brand-pink/50 transition-all"
+            >
+              <Sparkles className="w-4 h-4 text-brand-pink" />
+              <span className="text-[10px] font-black uppercase">Swipe</span>
+            </Link>
+          </div>
+
+          <div className="h-6 w-[1px] bg-white/10 mx-1" />
+
+          {/* THE HUB - Centralized Access */}
           <button
-            onClick={handleSurpriseMe}
-            disabled={isLoading}
-            className={cn(
-              "flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-purple/50 hover:bg-brand-purple/5",
-              isLoading && "opacity-50 cursor-not-allowed"
-            )}
-            title="Surprise Me"
+            id="tour-hub"
+            onClick={() => { setHubTab('vault'); setIsHubOpen(true); }}
+            className="flex items-center gap-2.5 px-4 py-2.5 bg-brand-purple text-white rounded-xl shadow-lg shadow-brand-purple/20 hover:scale-105 active:scale-95 transition-all"
           >
-            <Dice5 className={cn("w-4 h-4 text-brand-purple", isLoading && "animate-spin")} />
-            <span className="text-sm font-bold hidden sm:inline">Surprise Me</span>
+            <Library className="w-4 h-4" />
+            <span className="text-sm font-black uppercase tracking-tight">My Hub</span>
           </button>
 
           <div className="h-6 w-[1px] bg-white/10 mx-1" />
 
           <button
-            id="tour-vault"
-            onClick={() => setIsVaultOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-pink/50 hover:bg-brand-pink/5"
-            title="Open Cinema Vault"
+            onClick={() => setIsRadarOpen(true)}
+            className="p-2.5 rounded-xl glass border border-white/10 text-white/40 hover:text-white hover:border-brand-purple/50 transition-all"
+            title="Universe Radar"
           >
-            <Archive className="w-4 h-4 text-brand-pink" />
-            <span className="text-sm font-bold hidden sm:inline">Vault</span>
+            <Radar className="w-5 h-5" />
           </button>
-          
-          <div className="h-6 w-[1px] bg-white/10 mx-1" />
 
           <button
             onClick={clearHistory}
-            className="p-2.5 transition-all rounded-xl hover:bg-white/5 text-white/40 hover:text-white"
+            className="p-2.5 rounded-xl hover:bg-white/5 text-white/20 hover:text-white transition-colors"
             title="Clear Chat"
-            aria-label="Clear chat history"
           >
             <Trash2 className="w-5 h-5" />
           </button>
-          
+
           <div className="h-6 w-[1px] bg-white/10 mx-1" />
 
           <button
             onClick={() => logout()}
-            className="flex items-center gap-2.5 px-5 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-pink/50 hover:bg-brand-pink/5"
-            aria-label="Logout"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-red-500/20 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 transition-all"
           >
-            <LogOut className="w-4 h-4 text-brand-pink" />
-            <span className="text-sm font-bold">Logout</span>
+            <LogOut className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase hidden md:inline">Exit</span>
           </button>
-
-          <div className="h-6 w-[1px] bg-white/10 mx-1" />
-
-          <button
-            onClick={() => setIsFriendsOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-purple/50 hover:bg-brand-purple/5"
-            title="Cinema Circle"
-          >
-            <Users className="w-4 h-4 text-brand-purple" />
-            <span className="text-sm font-bold hidden sm:inline">Friends</span>
-          </button>
-
-          <div className="h-6 w-[1px] bg-white/10 mx-1" />
-
-          <button
-            id="tour-universe"
-            onClick={() => setIsRadarOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-purple/50 hover:bg-brand-purple/5"
-            title="Explore Cinematic Universe"
-          >
-            <Radar className="w-4 h-4 text-brand-purple" />
-            <span className="text-sm font-bold hidden sm:inline">Universe</span>
-          </button>
-
-          <div className="h-6 w-[1px] bg-white/10 mx-1" />
-
-          <Link
-            id="tour-swipe"
-            href="/swipe"
-            className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-pink/50 hover:bg-brand-pink/5"
-            title="Rapid Discovery"
-          >
-            <Sparkles className="w-4 h-4 text-brand-pink" />
-            <span className="text-sm font-bold hidden sm:inline">Swipe</span>
-          </Link>
-
-          <div className="h-6 w-[1px] bg-white/10 mx-1" />
-
-          <button
-            id="tour-journal"
-            onClick={() => setIsJournalOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-2.5 transition-all rounded-xl glass border border-white/10 text-white/70 hover:text-white hover:border-brand-purple/50 hover:bg-brand-purple/5"
-            title="AI Cinematic Journal"
-          >
-            <Book className="w-4 h-4 text-brand-purple" />
-            <span className="text-sm font-bold hidden sm:inline">Journal</span>
-          </button>
-          
-          <div className="h-6 w-[1px] bg-white/10 mx-1" />
 
           <button
             onClick={() => setShowTour(true)}
-            className="p-2.5 transition-all rounded-xl hover:bg-white/5 text-white/40 hover:text-white"
-            title="Start Tour"
+            className="p-2.5 rounded-xl text-white/20 hover:text-white"
           >
             <HelpCircle className="w-5 h-5" />
           </button>
@@ -759,42 +719,12 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <VaultDrawer 
-        isOpen={isVaultOpen} 
-        onClose={() => setIsVaultOpen(false)} 
-        movies={watchlist}
-        onRemove={(movie) => toggleWatchlist({ id: movie.tmdb_id, title: movie.title, poster: movie.poster_path } as any)}
-        onMarkWatched={(movie) => handleMarkWatched(movie)}
+      <CineHubDrawer 
+        isOpen={isHubOpen} 
+        onClose={() => setIsHubOpen(false)} 
+        initialTab={hubTab}
         onPlayTrailer={(movie) => handlePlayTrailer(movie)}
       />
-
-
-      <AnimatePresence>
-        {isPersonaCardOpen && persona && (
-          <PersonaCard 
-            persona={{
-              title: persona.title,
-              badge: persona.badge,
-              description: persona.desc
-            }}
-            stats={{
-              watchlistCount: persona.watchlist_count,
-              historyCount: persona.history_count
-            }}
-            onClose={() => setIsPersonaCardOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isRadarOpen && (
-          <VibeRadar onClose={() => setIsRadarOpen(false)} />
-        )}
-      </AnimatePresence>
-
-      <JournalDrawer isOpen={isJournalOpen} onClose={() => setIsJournalOpen(false)} />
-      
-      <FriendsDrawer isOpen={isFriendsOpen} onClose={() => setIsFriendsOpen(false)} />
       
       {showTour && (
         <OnboardingTour onComplete={() => {
