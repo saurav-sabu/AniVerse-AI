@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-    X, Film, Archive, Book, Users, Star, Edit3, Sparkles, Calendar, Search, UserPlus, Check, UserMinus, ExternalLink, Play, Trash2, Download, ArrowLeft
+    X, Film, Archive, Book, Users, Star, Edit3, Sparkles, Calendar, Search, UserPlus, Check, UserMinus, ExternalLink, Play, Trash2, Download, ArrowLeft, Loader2
 } from 'lucide-react';
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
@@ -228,6 +228,7 @@ function VaultTab({ onPlayTrailer }: { onPlayTrailer: (movie: any) => void }) {
                                 src={getTMDBImageUrl(movie.poster_path)} 
                                 alt={movie.title}
                                 fill
+                                sizes="(max-width: 448px) 50vw, 200px"
                                 className="object-cover transition-transform duration-500 group-hover:scale-110"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -326,7 +327,7 @@ function JournalTab() {
                     history.map(item => (
                         <div key={item.id} className="flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                              <div className="relative w-16 aspect-[2/3] rounded-lg overflow-hidden shrink-0 shadow-lg">
-                                <Image src={getTMDBImageUrl(item.poster_path)} alt={item.title} fill className="object-cover" />
+                                <Image src={getTMDBImageUrl(item.poster_path)} alt={item.title} fill sizes="64px" className="object-cover" />
                              </div>
                              <div className="flex-1 min-w-0">
                                 <div className="flex justify-between items-start mb-1">
@@ -408,6 +409,15 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
 
     return (
         <div className="space-y-8 pb-20">
+            {isLoading && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                    <div className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-black/60 border border-white/10 shadow-2xl">
+                        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Syncing Circle...</p>
+                    </div>
+                </div>
+            )}
+
             {selectedFriend ? (
                  <FriendProfileView data={selectedFriend} onBack={() => setSelectedFriend(null)} />
             ) : (
@@ -500,7 +510,7 @@ const FriendProfileView = ({ data, onBack }: { data: any, onBack: () => void }) 
                 <div className="grid grid-cols-2 gap-3">
                     {data.history.length > 0 ? data.history.slice(0, 4).map((m: any) => (
                         <div key={m.tmdb_id} className="relative aspect-[2/3] rounded-2xl overflow-hidden border border-white/5 shadow-lg group">
-                            <Image src={getTMDBImageUrl(m.poster_path)} alt={m.title} fill className="object-cover transition-transform group-hover:scale-110" />
+                            <Image src={getTMDBImageUrl(m.poster_path)} alt={m.title} fill sizes="(max-width: 448px) 40vw, 150px" className="object-cover transition-transform group-hover:scale-110" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                             <p className="absolute bottom-2 left-2 right-2 text-[8px] font-black text-white truncate uppercase tracking-tight">{m.title}</p>
                         </div>
