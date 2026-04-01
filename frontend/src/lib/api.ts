@@ -301,6 +301,10 @@ export async function getFriendList(): Promise<FriendProfile[]> {
     return fetchWithError('/friends/list');
 }
 
+export async function removeFriend(friendId: number): Promise<{ message: string }> {
+    return fetchWithError(`/friends/${friendId}`, { method: 'DELETE' });
+}
+
 export async function getFriendLibrary(friendId: number): Promise<{ 
     watchlist: any[], 
     history: any[], 

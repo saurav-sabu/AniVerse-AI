@@ -10,7 +10,7 @@ import ReactMarkdown from 'react-markdown';
 import { 
     getWatchlist, removeFromWatchlist, addToHistory, getHistory, updateHistoryEntry, getJournalSummary, 
     getTMDBImageUrl, searchUsers, sendFriendRequest, getPendingRequests, acceptFriendRequest, rejectFriendRequest, 
-    getFriendList, getFriendLibrary, exportWatchlist, 
+    getFriendList, getFriendLibrary, removeFriend, exportWatchlist, 
     UserPublic, FriendshipRequest, FriendProfile 
 } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -372,11 +372,16 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
     const [searchPerformed, setSearchPerformed] = useState(false);
 
     const refreshData = async () => {
+        setIsLoading(true);
         try {
             const [p, f] = await Promise.all([getPendingRequests(), getFriendList()]);
             setPending(p);
             setFriends(f);
-        } catch (e) {}
+        } catch (e) {
+            console.error("Failed to sync social hub:", e);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => { refreshData(); }, []);
@@ -414,9 +419,23 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
     };
 
     const handleInviteAction = async (rid: number, action: 'accept' | 'reject') => {
-        if (action === 'accept') await acceptFriendRequest(rid);
-        else await rejectFriendRequest(rid);
-        refreshData();
+        try {
+            if (action === 'accept') await acceptFriendRequest(rid);
+            else await rejectFriendRequest(rid);
+            refreshData();
+        } catch (e) {
+            alert(`Failed to ${action} request. Please try again.`);
+        }
+    };
+
+    const handleRemoveFriend = async (fid: number) => {
+        if (!confirm("Remove this cinemaphile from your circle?")) return;
+        try {
+            await removeFriend(fid);
+            refreshData();
+        } catch (e) {
+            alert("Failed to remove friend.");
+        }
     };
 
     const viewFriend = async (fid: number) => {
@@ -504,12 +523,24 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
                         ) : (
                             <div className="space-y-2">
                                 {friends.map(f => (
-                                    <div key={f.id} onClick={() => viewFriend(f.id)} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-indigo-400 hover:scale-[1.01] cursor-pointer transition-all">
+                                    <div key={f.id} onClick={() => viewFriend(f.id)} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10 hover:border-indigo-400 hover:scale-[1.01] cursor-pointer transition-all group">
                                         <div className="flex items-center gap-3">
                                             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-brand-purple flex items-center justify-center font-black text-white">{f.email[0].toUpperCase()}</div>
-                                            <div className="flex flex-col"><span className="text-xs font-black text-white truncate max-w-[180px]">{f.email}</span><span className="text-[8px] font-black text-white/20 uppercase">Pro Cinephile</span></div>
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-black text-white truncate max-w-[180px]">{f.email}</span>
+                                                <span className="text-[8px] font-black text-white/20 uppercase">Pro Cinephile</span>
+                                            </div>
                                         </div>
-                                        <ExternalLink className="w-3.5 h-3.5 text-white/10" />
+                                        <div className="flex items-center gap-2">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleRemoveFriend(f.id); }}
+                                                className="p-2 rounded-lg text-white/10 hover:text-red-400 hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100"
+                                                title="Remove Friend"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                            <ExternalLink className="w-3.5 h-3.5 text-white/10" />
+                                        </div>
                                     </div>
                                 ))}
                             </div>
