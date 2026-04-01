@@ -43,6 +43,15 @@ def send_friend_request(request: Request, friend_id: int, db: Session = Depends(
             existing.created_at = datetime.utcnow()
             db.commit()
             return existing
+        
+        # Defect 15: Symmetric Auto-Accept logic
+        # If the other person already sent a request, and I'm sending one now -> Mutual interest, auto-accept
+        if existing.status == "PENDING" and existing.friend_id == current_user.id:
+            existing.status = "ACCEPTED"
+            db.commit()
+            logger.info(f"Mutual interest detected between {current_user.id} and {friend_id}. Auto-accepted.")
+            return existing
+            
         raise HTTPException(status_code=400, detail=f"Friendship or request already exists (Status: {existing.status})")
         
     try:

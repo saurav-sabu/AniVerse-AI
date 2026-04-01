@@ -368,6 +368,8 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
     const [pending, setPending] = useState<FriendshipRequest[]>([]);
     const [friends, setFriends] = useState<FriendProfile[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [invitingIds, setInvitingIds] = useState<Set<number>>(new Set());
+    const [searchPerformed, setSearchPerformed] = useState(false);
 
     const refreshData = async () => {
         try {
@@ -382,13 +384,33 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (query.length < 3) return;
-        const r = await searchUsers(query);
-        setResults(r);
+        setIsLoading(true);
+        setSearchPerformed(true);
+        try {
+            const r = await searchUsers(query);
+            setResults(r);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleInvite = async (fid: number) => {
-        await sendFriendRequest(fid);
-        setResults(prev => prev.filter(u => u.id !== fid));
+        setInvitingIds(prev => new Set(prev).add(fid));
+        try {
+            await sendFriendRequest(fid);
+            setResults(prev => prev.filter(u => u.id !== fid));
+            refreshData(); // Update pending list if symmetric auto-accept happened
+        } catch (e) {
+            alert("Connection error: Sync failed.");
+        } finally {
+            setInvitingIds(prev => {
+                const next = new Set(prev);
+                next.delete(fid);
+                return next;
+            });
+        }
     };
 
     const handleInviteAction = async (rid: number, action: 'accept' | 'reject') => {
@@ -432,14 +454,28 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
                             />
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
                         </form>
-                        {results.length > 0 && (
+                        {results.length > 0 ? (
                             <div className="space-y-2">
                                 {results.map(u => (
                                     <div key={u.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
                                         <span className="text-xs font-bold text-white truncate max-w-[200px]">{u.email}</span>
-                                        <button onClick={() => handleInvite(u.id)} className="px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-[9px] font-black uppercase hover:scale-105 transition-transform"><UserPlus className="w-3 h-3 mr-1 inline" />Invite</button>
+                                        <button 
+                                            onClick={() => handleInvite(u.id)} 
+                                            disabled={invitingIds.has(u.id)}
+                                            className="px-3 py-1.5 rounded-lg bg-indigo-500 text-white text-[9px] font-black uppercase hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all"
+                                        >
+                                            {invitingIds.has(u.id) ? (
+                                                <Loader2 className="w-3 h-3 animate-spin" />
+                                            ) : (
+                                                <><UserPlus className="w-3 h-3 mr-1 inline" />Invite</>
+                                            )}
+                                        </button>
                                     </div>
                                 ))}
+                            </div>
+                        ) : searchPerformed && !isLoading && (
+                            <div className="py-4 text-center">
+                                <p className="text-[10px] font-black text-white/20 uppercase">No ciphers match this signature.</p>
                             </div>
                         )}
                     </div>
