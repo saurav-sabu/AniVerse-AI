@@ -10,11 +10,17 @@ def generate_journal_summary(history_entries):
         return "Your cinematic journal is empty. Start watching and reviewing movies to see your journey!"
 
     api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return "Your cinematic mood is currently being decrypted. AI-powered insights require a valid GROQ_API_KEY. Please configure your environment."
+
     llm = ChatGroq(
         model="qwen/qwen3-32b",
         api_key=api_key,
         temperature=0.7
     )
+    
+    from backend.utils.logger import get_logger
+    logger = get_logger(__name__)
 
     # Format the history for the prompt
     history_text = ""

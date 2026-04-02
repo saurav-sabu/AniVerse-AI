@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
 from typing import List
 from backend.database import get_db
 from backend.auth.get_user import get_current_user

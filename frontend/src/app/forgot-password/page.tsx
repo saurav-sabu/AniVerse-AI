@@ -1,28 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Film, Mail, ArrowLeft, Send } from 'lucide-react';
+import { Film, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { forgotPassword } from '@/lib/api';
 
 export default function ForgotPasswordPage() {
-    const [email, setEmail] = useState('');
-    const [message, setMessage] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        try {
-            const resp = await forgotPassword(email);
-            setMessage(resp);
-        } catch (err) {
-            setMessage("Something went wrong. Please try again.");
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     return (
         <main className="relative flex flex-col items-center justify-center min-h-screen p-4 overflow-hidden">

@@ -93,12 +93,13 @@ export default function CineSwipePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [hasMounted, setHasMounted] = useState(false);
 
   const router = useRouter();
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('cinesync_token') : null;
-    if (!token) {
+    setHasMounted(true);
+    if (!isLoggedIn()) {
       router.push('/login');
       return;
     }
@@ -117,6 +118,7 @@ export default function CineSwipePage() {
     loadDeck();
   }, [router]);
 
+  // Handle Keydown
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') handleSwipe('left');
@@ -132,24 +134,20 @@ export default function CineSwipePage() {
     const movie = deck[currentIndex];
     
     if (direction === 'right') {
-      // Like -> Add to Watchlist
       try {
         await addToWatchlist(movie.id, movie.title, movie.poster);
       } catch (e) {
         console.error("Failed to add to watchlist", e);
       }
-    } else {
-      // Skip -> Just transition to next (no history entry)
-      console.log(`Skipped: ${movie.title}`);
     }
 
     setCurrentIndex(prev => prev + 1);
   };
 
-  if (loading) {
+  if (!hasMounted || loading) {
     return (
       <div className="h-screen bg-[#050505] flex items-center justify-center">
-        <div className="text-brand-pink animate-pulse font-black uppercase tracking-widest">Shuffling Deck...</div>
+        <div className="text-brand-pink animate-pulse font-black uppercase tracking-widest text-xs">Shuffling Deck...</div>
       </div>
     );
   }

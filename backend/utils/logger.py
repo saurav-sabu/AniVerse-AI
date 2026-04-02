@@ -1,36 +1,55 @@
 import logging
 import os
+import json
 from datetime import datetime
+
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        log_record = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "name": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            log_record["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_record)
 
 def get_logger(name: str):
     """
-    Returns a configured logger instance (Functional approach).
-    Logs are written to both the console and a file in the logs/ directory.
+    Returns a configured logger instance.
+    - Production: JSON logging to stdout (Defect 14)
+    - Development: Pretty-printed console and file logging
     """
     logger = logging.getLogger(name)
     
     if not logger.handlers:
-        logger.setLevel(logging.INFO)
+        # Configurable log level (Defect 14)
+        level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+        level = getattr(logging, level_name, logging.INFO)
+        logger.setLevel(level)
         
-        # Create logs directory if it doesn't exist
-        log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        env = os.getenv("ENV", "development").lower()
+        
+        if env == "production":
+            # Production: JSON to stdout only (Defect 14)
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(JSONFormatter())
+            logger.addHandler(console_handler)
+        else:
+            # Development: Console + File logging
+            log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
+            if not os.path.exists(log_dir):
+                os.makedirs(log_dir)
             
-        # File handler
-        log_filename = datetime.now().strftime("%Y-%m-%d") + "_cinesync.log"
-        file_handler = logging.FileHandler(os.path.join(log_dir, log_filename))
-        file_handler.setFormatter(logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        ))
-        
-        # Console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(logging.Formatter(
-            '%(name)s - %(levelname)s - %(message)s'
-        ))
-        
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
-        
+            log_filename = datetime.now().strftime("%Y-%m-%d") + "_cinesync.log"
+            file_handler = logging.FileHandler(os.path.join(log_dir, log_filename))
+            file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+            
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(logging.Formatter('%(name)s - %(levelname)s - %(message)s'))
+            
+            logger.addHandler(file_handler)
+            logger.addHandler(console_handler)
+            
     return logger

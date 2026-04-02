@@ -40,19 +40,15 @@ export function getTMDBImageUrl(path: string | null, size: 'w500' | 'original' =
 }
 
 export async function fetchWithError(endpoint: string, options: RequestInit = {}): Promise<any> {
-    const token = getAuthToken();
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...(options.headers as Record<string, string>),
     };
 
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-    }
-
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers,
+        credentials: 'include', // Defect 6: Send HttpOnly cookies automatically
     });
 
     if (response.status === 401) {
@@ -68,28 +64,30 @@ export async function fetchWithError(endpoint: string, options: RequestInit = {}
     return response.json();
 }
 
-// Auth State Helper
+// Auth State Helper (Defect 6: Use local storage only as a UI marker, not for the token)
 export const getAuthToken = () => {
-    if (typeof window !== 'undefined') {
-        return localStorage.getItem('cinesync_token');
-    }
-    return null;
+    return null; // Token is now in HttpOnly cookie, inaccessible to JS
 }
 
-export const setAuthToken = (token: string) => {
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('cinesync_token', token);
+export const isLoggedIn = () => {
+    if (typeof window === 'undefined') return false;
+    try {
+        return localStorage.getItem('cinesync_logged_in') === 'true';
+    } catch {
+        return false;
     }
 }
 
 export const logout = () => {
     if (typeof window !== 'undefined') {
-        localStorage.removeItem('cinesync_token');
+        localStorage.removeItem('cinesync_logged_in');
+        // Clear all session storage as well for safety
+        sessionStorage.clear();
         window.location.href = '/login';
     }
 }
 
-export async function loginUser(email: string, password: string): Promise<string> {
+export async function loginUser(email: string, password: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,13 +95,15 @@ export async function loginUser(email: string, password: string): Promise<string
     });
 
     if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ detail: 'Login failed' }));
         throw new Error(error.detail || 'Login failed');
     }
 
-    const data = await response.json();
-    setAuthToken(data.access_token);
-    return data.access_token;
+    // Cookie is set by the backend. We flag that we are logged in for the UI.
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('cinesync_logged_in', 'true');
+        console.log("Auth session established successfully.");
+    }
 }
 
 export async function registerUser(email: string, password: string): Promise<void> {
@@ -135,37 +135,16 @@ export async function forgotPassword(email: string): Promise<string> {
     return data.message;
 }
 
-export async function getRecommendation(query: string, history: Message[], signal?: AbortSignal): Promise<string> {
-    const token = getAuthToken();
-    if (!token) {
-        throw new Error('Unauthorized');
-    }
-
+export async function getRecommendation(prompt: string, history: Message[] = [], signal?: AbortSignal): Promise<string> {
     try {
-        const response = await fetch(`${API_BASE_URL}/recommend`, {
+        const data: RecommendResponse = await fetchWithError('/recommend', {
             method: 'POST',
             signal,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify({
-                query,
+                prompt,
                 history,
             }),
         });
-
-        if (response.status === 401) {
-            logout();
-            throw new Error('Session expired. Please login again.');
-        }
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Failed to fetch recommendation');
-        }
-
-        const data: RecommendResponse = await response.json();
         return data.response;
     } catch (error) {
         console.error('API Error:', error);
@@ -227,13 +206,9 @@ export async function getPersona(): Promise<{ title: string, badge: string, desc
 }
 
 export async function exportWatchlist(): Promise<void> {
-    const token = getAuthToken();
-    if (!token) throw new Error('Unauthorized');
-
     const response = await fetch(`${API_BASE_URL}/recommend/export-watchlist`, {
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
+        headers: {},
+        credentials: 'include'
     });
 
     if (!response.ok) throw new Error('Export failed');

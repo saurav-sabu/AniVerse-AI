@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Film, Mail, Lock, LogIn } from 'lucide-react';
 import Link from 'next/link';
@@ -12,7 +12,18 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [hasMounted, setHasMounted] = useState(false);
     const router = useRouter();
+
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
+    if (!hasMounted) return (
+        <div className="h-screen bg-[#050505] flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-brand-pink border-t-transparent rounded-full animate-spin" />
+        </div>
+    );
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();

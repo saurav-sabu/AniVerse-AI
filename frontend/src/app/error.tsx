@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
 import Link from 'next/link';
 
@@ -23,12 +22,8 @@ export default function Error({
         <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] bg-red-500/10 rounded-full blur-[120px]" />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="z-10 max-w-md"
-      >
-        <div className="inline-flex p-6 rounded-3xl bg-red-500/10 border border-red-500/20 mb-8">
+      <div className="z-10 max-w-md">
+        <div className="inline-flex p-6 rounded-3xl bg-red-500/10 border border-red-500/20 mb-8 transition-transform hover:scale-105">
           <AlertCircle size={48} className="text-red-500" />
         </div>
         
@@ -57,7 +52,7 @@ export default function Error({
             Return Base
           </Link>
         </div>
-      </motion.div>
+      </div>
     </main>
   );
 }

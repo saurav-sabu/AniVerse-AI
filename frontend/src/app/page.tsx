@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
-  getRecommendation, Message, getAuthToken, logout, addToWatchlist, 
+  getRecommendation, Message, isLoggedIn, logout, addToWatchlist, 
   removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, 
   getPersona, getTMDBImageUrl, getSurpriseRecommendation 
 } from '@/lib/api';
@@ -32,6 +32,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [selectedTrailer, setSelectedTrailer] = useState<MovieMetadata | null>(null);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
@@ -48,13 +49,13 @@ export default function Home() {
 
   // Auth & Data fetch
   useEffect(() => {
-    const token = getAuthToken();
-    if (!token) {
+    setHasMounted(true);
+    const authenticated = isLoggedIn();
+    if (!authenticated) {
       router.push('/login');
     } else {
       setIsAuthenticated(true);
       fetchWatchlist();
-      // fetchPersona is called inside fetchWatchlist, no need to call twice
       
       // Check for tour
       const tourCompleted = localStorage.getItem('cinesync_tour_completed');
@@ -63,6 +64,17 @@ export default function Home() {
       }
     }
   }, [router]);
+
+  if (!hasMounted || !isAuthenticated) {
+    return (
+      <div className="h-screen bg-[#050505] flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-brand-pink border-t-transparent rounded-full animate-spin" />
+          <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Syncing Library...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -726,12 +738,31 @@ export default function Home() {
         onPlayTrailer={(movie) => handlePlayTrailer(movie)}
       />
       
-      {showTour && (
-        <OnboardingTour onComplete={() => {
-          setShowTour(false);
-          localStorage.setItem('cinesync_tour_completed', 'true');
-        }} />
-      )}
+      <AnimatePresence>
+        {showTour && (
+          <OnboardingTour onComplete={() => {
+            setShowTour(false);
+            localStorage.setItem('cinesync_tour_completed', 'true');
+          }} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isPersonaCardOpen && persona && persona.title && persona.badge && (
+          <PersonaCard 
+            persona={{
+              title: persona.title,
+              badge: persona.badge,
+              description: persona.desc || "A mysterious cinephile..."
+            }}
+            stats={{
+              watchlistCount: persona.watchlist_count || 0,
+              historyCount: persona.history_count || 0
+            }}
+            onClose={() => setIsPersonaCardOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </main>
   );
 }

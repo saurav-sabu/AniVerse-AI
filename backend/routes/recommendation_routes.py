@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from backend.schemas.movie_schema import RecommendRequest, RecommendResponse
 from backend.agent import get_movie_recommendation
@@ -12,9 +13,9 @@ from backend.models.user_model import User
 
 logger = get_logger(__name__)
 
-router = APIRouter(tags=["recommendations"])
+router = APIRouter(prefix="/recommend", tags=["recommendations"])
 
-@router.post("/recommend", response_model=RecommendResponse)
+@router.post("/", response_model=RecommendResponse)
 @limiter.limit("5/minute")
 def recommend(request: Request, recommend_request: RecommendRequest, current_user = Depends(get_current_user)):
     """
@@ -40,7 +41,7 @@ def recommend(request: Request, recommend_request: RecommendRequest, current_use
         logger.error(f"API Error for {current_user.email}: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while processing your request.")
 
-@router.get("/recommend/surprise", response_model=RecommendResponse)
+@router.get("/surprise", response_model=RecommendResponse)
 @limiter.limit("3/minute")
 def surprise_me(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
@@ -54,7 +55,6 @@ def surprise_me(request: Request, db: Session = Depends(get_db), current_user: U
         excluded_titles = list(set([m.title for m in watchlist + history]))
         
         # 2. Build a context-rich query for the agent
-        # Re-using the logic from Persona (though a bit simplified for the prompt)
         context_prompt = (
             f"I am a user with {len(watchlist)} movies in my Vault and {len(history)} movies in my History. "
             f"My favorite genres seem to be represented by these titles: {', '.join(excluded_titles[-5:]) if excluded_titles else 'None yet'}. "
@@ -75,3 +75,32 @@ def surprise_me(request: Request, db: Session = Depends(get_db), current_user: U
     except Exception as e:
         logger.error(f"Surprise Me Error for {current_user.email}: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate a surprise recommendation.")
+
+@router.get("/export-watchlist")
+def export_watchlist(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Endpoint to export the user's entire cinematic library (Vault + History) as JSON.
+    """
+    try:
+        watchlist = db.query(Watchlist).filter(Watchlist.user_id == current_user.id).all()
+        history = db.query(History).filter(History.user_id == current_user.id).all()
+        
+        data = {
+            "user": current_user.email,
+            "exported_at": str(datetime.utcnow()),
+            "vault": [
+                {"tmdb_id": m.tmdb_id, "title": m.title, "added_at": str(m.added_at)} 
+                for m in watchlist
+            ],
+            "history": [
+                {"tmdb_id": m.tmdb_id, "title": m.title, "viewed_at": str(m.viewed_at), "rating": m.rating, "notes": m.notes} 
+                for m in history
+            ]
+        }
+        
+        logger.info(f"Exported data for {current_user.email}")
+        return data
+        
+    except Exception as e:
+        logger.error(f"Export Error for {current_user.email}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export library data.")

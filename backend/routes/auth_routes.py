@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models.user_model import User
@@ -9,6 +10,8 @@ from fastapi import Request
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+from fastapi.responses import JSONResponse
+
 @router.post("/register", response_model=UserResponse)
 @limiter.limit("5/minute")
 def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
@@ -16,7 +19,9 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
     logger = get_logger(__name__)
     logger.info(f"Registering user: {user.email}")
     
-    # Password complexity and length are validated by UserCreate (auth_schema.py)
+    is_production = os.getenv("ENV") == "production"
+    logger.debug(f"Cookie Security - Production: {is_production}")
+    
     try:
         db_user = db.query(User).filter(User.email == user.email).first()
         if db_user:
@@ -28,27 +33,62 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+        
+        access_token = create_access_token(data={"sub": new_user.email})
+        
+        # Explicit Response for cookie reliability
+        content = {"id": new_user.id, "email": new_user.email}
+        response = JSONResponse(content=content)
+        response.set_cookie(
+            key="access_token", 
+            value=access_token, 
+            httponly=True, 
+            samesite="lax", 
+            secure=is_production, 
+            max_age=604800
+        )
+        
         logger.info(f"User registered successfully: {user.email}")
-        return new_user
+        return response
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Registration exception for {user.email}: {e}")
-        raise HTTPException(status_code=500, detail="An internal server error occurred. Please try again later.")
+        raise HTTPException(status_code=500, detail="An internal server error occurred.")
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 @limiter.limit("10/minute")
 def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
+    from backend.utils.logger import get_logger
+    logger = get_logger(__name__)
+    
     db_user = db.query(User).filter(User.email == user.email).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Incorrect email or password"
         )
     
     access_token = create_access_token(data={"sub": db_user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+    
+    # Force secure=False for localhost (Defect 6 Critical Fix)
+    is_localhost = any(h in str(request.url) for h in ["localhost", "127.0.0.1"])
+    is_production = os.getenv("ENV") == "production" and not is_localhost
+    
+    logger.debug(f"Login Cookie - Prod: {is_production} | Local: {is_localhost} | Secure: {is_production}")
+    
+    content = {"access_token": access_token, "token_type": "bearer"}
+    response = JSONResponse(content=content)
+    response.set_cookie(
+        key="access_token", 
+        value=access_token, 
+        httponly=True, 
+        samesite="lax", 
+        secure=is_production,
+        max_age=604800
+    )
+    
+    return response
 
 @router.post("/forgot-password")
 @limiter.limit("3/minute")

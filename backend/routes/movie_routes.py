@@ -21,4 +21,5 @@ def fetch_trailer(request: Request, tmdb_id: int, current_user: User = Depends(g
             raise HTTPException(status_code=404, detail=trailer_key)
         return {"key": trailer_key}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Trailer fetch error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch trailer information from external source.")

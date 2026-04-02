@@ -198,14 +198,18 @@ def get_swipe_deck(current_user: User = Depends(get_current_user), db: Session =
     history = db.query(History).filter(History.user_id == current_user.id).all()
     user_movie_ids = {m.tmdb_id for m in watchlist + history}
     
-    # 2. Fetch trending movies
+    # 2. Fetch trending movies with error handling (Defect 4)
     TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     endpoint = f"https://api.themoviedb.org/3/trending/movie/week"
     params = {"api_key": TMDB_API_KEY, "language": "en-US"}
     
-    response = requests.get(endpoint, params=params)
-    response.raise_for_status()
-    trending = response.json().get("results", [])
+    try:
+        response = requests.get(endpoint, params=params, timeout=5)
+        response.raise_for_status()
+        trending = response.json().get("results", [])
+    except Exception as e:
+        logger.error(f"Failed to fetch trending movies from TMDB: {e}")
+        trending = [] # Fallback to empty deck if TMDB is down
     
     # 3. Filter and format
     deck = []

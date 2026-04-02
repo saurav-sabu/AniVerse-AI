@@ -6,9 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+IS_TESTING = os.getenv("TESTING", "false").lower() == "true"
+ENV = os.getenv("ENV", "development").lower()
 
 if not SQLALCHEMY_DATABASE_URL:
-    # Fallback or placeholder for development
+    if ENV == "production" and not IS_TESTING:
+        raise ValueError("DATABASE_URL must be set in production environment.")
     SQLALCHEMY_DATABASE_URL = "sqlite:///./temp_db.db"
 
 engine_kwargs = {}
