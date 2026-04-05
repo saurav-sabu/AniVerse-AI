@@ -23,7 +23,12 @@ def recommend(request: Request, recommend_request: RecommendRequest, current_use
     Requires a valid JWT token.
     """
     try:
-        logger.info(f"API Request from {current_user.email}: {recommend_request.query}")
+        # Resolve query from either 'query' or 'prompt' field
+        user_query = recommend_request.query or recommend_request.prompt
+        if not user_query:
+            raise HTTPException(status_code=400, detail="Either 'query' or 'prompt' must be provided.")
+        
+        logger.info(f"API Request from {current_user.email}: {user_query}")
         
         # Convert history format
         formatted_history = []
@@ -31,7 +36,7 @@ def recommend(request: Request, recommend_request: RecommendRequest, current_use
             formatted_history = [(m.role, m.content) for m in recommend_request.history]
         
         response = get_movie_recommendation(
-            recommend_request.query, 
+            user_query, 
             history=formatted_history,
             user_context={"email": current_user.email}
         )

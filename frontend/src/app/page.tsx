@@ -746,6 +746,18 @@ export default function Home() {
       </AnimatePresence>
 
       <AnimatePresence>
+        {isRadarOpen && (
+          <VibeRadar 
+            onClose={() => setIsRadarOpen(false)} 
+            onNavigate={(movieId) => {
+              setIsRadarOpen(false);
+              handlePlayTrailer({ id: movieId });
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {isPersonaCardOpen && persona && persona.title && persona.badge && (
           <PersonaCard 
             persona={{

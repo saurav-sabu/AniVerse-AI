@@ -67,7 +67,7 @@ async def add_security_headers(request, call_next):
     
     # Environment-aware CSP (Defect 11 Recovery)
     env = os.getenv("ENV", "development").lower()
-    script_src = "'self' 'unsafe-inline'"
+    script_src = "'self' 'unsafe-inline' https://cdn.jsdelivr.net"
     if env != "production":
         script_src += " 'unsafe-eval'"  # Required for some dev tools/HMR
         
@@ -75,9 +75,9 @@ async def add_security_headers(request, call_next):
     response.headers["Content-Security-Policy"] = (
         f"default-src 'self'; "
         f"connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 {os.getenv('ALLOWED_ORIGINS', '')}; "
-        f"img-src 'self' data: https://image.tmdb.org https://images.unsplash.com; "
+        f"img-src 'self' data: https://image.tmdb.org https://images.unsplash.com https://fastapi.tiangolo.com; "
         f"script-src {script_src}; "
-        f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
         f"font-src 'self' https://fonts.gstatic.com;"
     )
     return response

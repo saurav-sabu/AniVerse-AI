@@ -6,7 +6,8 @@ class ChatMessage(BaseModel):
     content: str = Field(..., max_length=5000)
 
 class RecommendRequest(BaseModel):
-    query: str = Field(..., max_length=1000)
+    query: Optional[str] = Field(None, max_length=1000)
+    prompt: Optional[str] = Field(None, max_length=1000)
     history: Optional[List[ChatMessage]] = Field(None, max_length=20)
 
 class RecommendResponse(BaseModel):
