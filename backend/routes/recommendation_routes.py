@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/recommend", tags=["recommendations"])
 
-@router.post("/", response_model=RecommendResponse)
+@router.post("", response_model=RecommendResponse)
 @limiter.limit("5/minute")
 def recommend(request: Request, recommend_request: RecommendRequest, current_user = Depends(get_current_user)):
     """

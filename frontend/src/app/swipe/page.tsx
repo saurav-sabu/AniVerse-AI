@@ -78,7 +78,7 @@ const MovieCard = ({
         <div className="absolute bottom-0 left-0 right-0 p-8">
           <div className="flex items-center gap-2 mb-2">
             <span className="px-2 py-0.5 rounded bg-brand-pink text-[10px] font-black uppercase text-white">Trending</span>
-            <span className="text-white/60 text-xs font-bold">⭐ {movie.vote_average.toFixed(1)}</span>
+            <span className="text-white/60 text-xs font-bold">⭐ {movie.vote_average != null ? Number(movie.vote_average).toFixed(1) : '0.0'}</span>
           </div>
           <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-2">{movie.title}</h2>
           <p className="text-white/60 text-sm line-clamp-3 leading-relaxed">{movie.overview}</p>

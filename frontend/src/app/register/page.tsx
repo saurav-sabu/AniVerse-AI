@@ -37,7 +37,7 @@ export default function RegisterPage() {
         try {
             await registerUser(email, password);
             setSuccess(true);
-            setTimeout(() => router.push('/login'), 2000);
+            setTimeout(() => router.push('/'), 2000);
         } catch (err: any) {
             setError(err.message || 'Registration failed. Try again.');
         } finally {
@@ -73,7 +73,7 @@ export default function RegisterPage() {
 
                 {success && (
                     <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 text-green-500 rounded-xl text-sm text-center">
-                        Account created! Redirecting to login...
+                        Account created! Setting up your sync environment...
                     </div>
                 )}
 
@@ -84,8 +84,10 @@ export default function RegisterPage() {
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
                             <input
                                 id="email"
+                                name="email"
                                 type="email"
                                 required
+                                autoComplete="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="you@example.com"
@@ -100,8 +102,10 @@ export default function RegisterPage() {
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
                             <input
                                 id="password"
+                                name="password"
                                 type="password"
                                 required
+                                autoComplete="new-password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
@@ -116,8 +120,10 @@ export default function RegisterPage() {
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
                             <input
                                 id="confirm-password"
+                                name="confirm-password"
                                 type="password"
                                 required
+                                autoComplete="new-password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 placeholder="••••••••"

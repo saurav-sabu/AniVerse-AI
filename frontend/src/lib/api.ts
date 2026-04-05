@@ -8,7 +8,7 @@ export interface RecommendResponse {
     response: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export function getTMDBImageUrl(path: string | null, size: 'w500' | 'original' = 'w500'): string {
     const fallback = "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500&auto=format&fit=crop";
@@ -58,7 +58,10 @@ export async function fetchWithError(endpoint: string, options: RequestInit = {}
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(error.detail || 'Request failed');
+        const errorMessage = Array.isArray(error.detail) 
+            ? error.detail.map((e: any) => e.msg).join('; ') 
+            : error.detail;
+        throw new Error(errorMessage || 'Request failed');
     }
 
     return response.json();
@@ -117,6 +120,11 @@ export async function registerUser(email: string, password: string): Promise<voi
         const error = await response.json();
         throw new Error(error.detail || 'Registration failed');
     }
+
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('cinesync_logged_in', 'true');
+        console.log("Auth session established successfully via registration.");
+    }
 }
 
 export async function forgotPassword(email: string): Promise<string> {
@@ -141,7 +149,7 @@ export async function getRecommendation(prompt: string, history: Message[] = [],
             method: 'POST',
             signal,
             body: JSON.stringify({
-                prompt,
+                query: prompt,
                 history,
             }),
         });

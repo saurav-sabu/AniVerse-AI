@@ -65,16 +65,6 @@ export default function Home() {
     }
   }, [router]);
 
-  if (!hasMounted || !isAuthenticated) {
-    return (
-      <div className="h-screen bg-[#050505] flex items-center justify-center text-white">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-brand-pink border-t-transparent rounded-full animate-spin" />
-          <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Syncing Library...</p>
-        </div>
-      </div>
-    );
-  }
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -106,16 +96,16 @@ export default function Home() {
     }
   }, [messages, isLoading]);
 
-  const fetchPersona = async () => {
+  async function fetchPersona() {
     try {
       const data = await getPersona();
       setPersona(data);
     } catch (e) {
       console.error("Failed to fetch persona", e);
     }
-  };
+  }
 
-  const fetchWatchlist = async () => {
+  async function fetchWatchlist() {
     try {
       const data = await getWatchlist();
       setWatchlist(data);
@@ -123,7 +113,7 @@ export default function Home() {
     } catch (e) {
       console.error("Failed to fetch watchlist", e);
     }
-  };
+  }
 
   const handleMarkWatched = async (movie: any) => {
     try {
@@ -383,8 +373,16 @@ export default function Home() {
     );
   };
 
-  if (!isAuthenticated) return null;
-
+  if (!hasMounted || !isAuthenticated) {
+    return (
+      <div className="h-screen bg-[#050505] flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-brand-pink border-t-transparent rounded-full animate-spin" />
+          <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Syncing Library...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <main className="relative flex flex-col h-screen overflow-hidden bg-[#050505]">
       {/* Global Error Banner */}

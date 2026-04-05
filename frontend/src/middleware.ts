@@ -13,9 +13,10 @@ export function middleware(request: NextRequest) {
   }
 
   // Redirect to home if already logged in and hitting login/register
-  if ((pathname === '/login' || pathname === '/register') && token) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
+  // Disabled as it causes infinite loops if localStorage gets cleared but HttpOnly cookie remains
+  // if ((pathname === '/login' || pathname === '/register') && token) {
+  //   return NextResponse.redirect(new URL('/', request.url));
+  // }
 
   return NextResponse.next();
 }
