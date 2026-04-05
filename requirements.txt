@@ -1,8 +1,8 @@
-langchain==1.2.10
-langchain-core==1.2.19
-langchain-community==0.4.1
-langchain-groq==1.1.2
-langgraph==1.0.10
+langchain>=1.2.15
+langchain-core>=1.2.26
+langchain-community>=0.4.1
+langchain-groq>=1.1.2
+langgraph>=1.1.6
 slowapi==0.1.9
 python-dotenv==1.2.2
 requests==2.32.5
