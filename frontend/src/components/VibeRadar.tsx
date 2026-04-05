@@ -14,7 +14,13 @@ interface RadarNode {
   type: 'watchlist' | 'history';
 }
 
-export default function VibeRadar({ onClose }: { onClose: () => void }) {
+export default function VibeRadar({ 
+  onClose,
+  onNavigate 
+}: { 
+  onClose: () => void;
+  onNavigate?: (movieId: string) => void;
+}) {
   const [nodes, setNodes] = useState<RadarNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [hoveredNode, setHoveredNode] = useState<RadarNode | null>(null);
@@ -117,6 +123,7 @@ export default function VibeRadar({ onClose }: { onClose: () => void }) {
               onMouseLeave={() => setHoveredNode(null)}
             >
               <div 
+                onClick={() => onNavigate?.(node.id)}
                 className={`w-3 h-3 rounded-full cursor-pointer transition-all duration-300 shadow-[0_0_15px_rgba(236,72,153,0.5)]
                   ${node.type === 'watchlist' ? 'bg-pink-500' : 'bg-purple-500'}
                   hover:scale-150 hover:shadow-[0_0_15px_rgba(236,72,153,0.8)]
