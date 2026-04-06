@@ -17,6 +17,11 @@ if not SQLALCHEMY_DATABASE_URL:
 engine_kwargs = {}
 if SQLALCHEMY_DATABASE_URL and SQLALCHEMY_DATABASE_URL.startswith("postgresql"):
     engine_kwargs["pool_pre_ping"] = True
+    engine_kwargs["pool_size"] = int(os.getenv("DB_POOL_SIZE", "5"))
+    engine_kwargs["max_overflow"] = int(os.getenv("DB_MAX_OVERFLOW", "10"))
+    engine_kwargs["pool_timeout"] = 30
+    engine_kwargs["pool_recycle"] = 1800  # Recycle connections every 30 minutes
+
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 

@@ -4,13 +4,21 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models.user_model import User
 from backend.schemas.auth_schema import UserCreate, UserLogin, UserResponse, Token, ForgotPasswordRequest
-from backend.auth.auth_utils import get_password_hash, verify_password, create_access_token
+from backend.auth.auth_utils import get_password_hash, verify_password, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+
 from backend.utils.rate_limit import limiter
 from fastapi import Request
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 from fastapi.responses import JSONResponse
+
+def _is_secure_cookie(request: Request) -> bool:
+    if os.getenv("ENV") != "production":
+        return False
+    is_localhost = any(h in str(request.url) for h in ["localhost", "127.0.0.1"])
+    return not is_localhost
+
 
 @router.post("/register", response_model=UserResponse)
 @limiter.limit("5/minute")
@@ -44,9 +52,10 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
             value=access_token, 
             httponly=True, 
             samesite="lax", 
-            secure=is_production, 
-            max_age=604800
+            secure=_is_secure_cookie(request), 
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
+
         
         logger.info(f"User registered successfully: {user.email}")
         return response
@@ -71,9 +80,7 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
     
     access_token = create_access_token(data={"sub": db_user.email})
     
-    # Force secure=False for localhost (Defect 6 Critical Fix)
-    is_localhost = any(h in str(request.url) for h in ["localhost", "127.0.0.1"])
-    is_production = os.getenv("ENV") == "production" and not is_localhost
+    # Unified secure flag logic (DEF-004)
     
     logger.debug(f"Login Cookie - Prod: {is_production} | Local: {is_localhost} | Secure: {is_production}")
     
@@ -84,9 +91,10 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
         value=access_token, 
         httponly=True, 
         samesite="lax", 
-        secure=is_production,
-        max_age=604800
+        secure=_is_secure_cookie(request),
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
+
     
     return response
 

@@ -370,6 +370,8 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
     const [isLoading, setIsLoading] = useState(false);
     const [invitingIds, setInvitingIds] = useState<Set<number>>(new Set());
     const [searchPerformed, setSearchPerformed] = useState(false);
+    const [socialError, setSocialError] = useState<string | null>(null);
+
 
     const refreshData = async () => {
         setIsLoading(true);
@@ -408,7 +410,8 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
             setResults(prev => prev.filter(u => u.id !== fid));
             refreshData(); // Update pending list if symmetric auto-accept happened
         } catch (e) {
-            alert("Connection error: Sync failed.");
+            setSocialError("Connection error: Sync failed.");
+
         } finally {
             setInvitingIds(prev => {
                 const next = new Set(prev);
@@ -424,7 +427,8 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
             else await rejectFriendRequest(rid);
             refreshData();
         } catch (e) {
-            alert(`Failed to ${action} request. Please try again.`);
+            setSocialError(`Failed to ${action} request. Please try again.`);
+
         }
     };
 
@@ -434,7 +438,8 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
             await removeFriend(fid);
             refreshData();
         } catch (e) {
-            alert("Failed to remove friend.");
+            setSocialError("Failed to remove friend.");
+
         }
     };
 
@@ -450,6 +455,13 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
 
     return (
         <div className="space-y-8 pb-20">
+            {socialError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold flex items-center justify-between">
+                    <span>{socialError}</span>
+                    <button onClick={() => setSocialError(null)} className="p-1 hover:bg-white/5 rounded-full"><X className="w-3 h-3" /></button>
+                </div>
+            )}
+
             {isLoading && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
                     <div className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-black/60 border border-white/10 shadow-2xl">

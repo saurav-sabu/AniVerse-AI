@@ -53,6 +53,7 @@ def add_to_journal(title: str, tmdb_id: str, poster_path: str, rating: int = Non
         db.commit()
         return msg
     except Exception as e:
+        db.rollback()
         logger.error(f"Failed to add to journal tool: {e}")
         return f"An error occurred while journaling the movie."
     finally:

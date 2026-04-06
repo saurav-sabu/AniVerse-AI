@@ -8,7 +8,8 @@ def test_read_health():
     """Test the health check endpoint."""
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy"}
+    assert response.json()["status"] == "healthy"
+    assert "database" in response.json()
 
 def test_auth_register_duplicate(db_session=None):
     """Test registration with an existing email (mocked)."""

@@ -9,7 +9,8 @@ from backend.models.library_model import Watchlist, History
 from backend.schemas.friend_schema import FriendshipRequest, FriendProfile
 from backend.utils.logger import get_logger
 from backend.utils.rate_limit import limiter
-from datetime import datetime
+from datetime import datetime, timezone
+
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/friends", tags=["friends"])
@@ -40,7 +41,8 @@ def send_friend_request(request: Request, friend_id: int, db: Session = Depends(
             existing.status = "PENDING"
             existing.user_id = current_user.id # Current user becomes the sender
             existing.friend_id = friend_id
-            existing.created_at = datetime.utcnow()
+            existing.created_at = datetime.now(timezone.utc)
+
             db.commit()
             return existing
         

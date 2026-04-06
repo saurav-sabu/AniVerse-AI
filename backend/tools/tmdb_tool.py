@@ -365,7 +365,10 @@ def get_movie_trailer(movie_id: int) -> str:
 
         # Prefer "Trailer" over "Teaser"
         official_trailer = next((t for t in trailers if t.get("type") == "Trailer"), trailers[0])
-        return official_trailer.get("key", "")
+        key = official_trailer.get("key")
+        if not key:
+            return "No official trailer found on YouTube for this movie."
+        return key
 
     except requests.exceptions.RequestException as e:
         logger.error(f"TMDB Videos API failed: {e}")

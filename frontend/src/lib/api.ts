@@ -95,7 +95,9 @@ export async function loginUser(email: string, password: string): Promise<void> 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
     });
+
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Login failed' }));
@@ -114,7 +116,9 @@ export async function registerUser(email: string, password: string): Promise<voi
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
     });
+
 
     if (!response.ok) {
         const error = await response.json();

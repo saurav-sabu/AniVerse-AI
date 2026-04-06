@@ -6,7 +6,8 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protected routes
-  const protectedPaths = ['/']; // Root is protected in this app
+  const protectedPaths = ['/', '/swipe', '/universe'];
+
   
   if (protectedPaths.some(path => pathname === path) && !token) {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -22,5 +23,6 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/login', '/register'],
+  matcher: ['/', '/login', '/register', '/swipe', '/universe'],
+
 };

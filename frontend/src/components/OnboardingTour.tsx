@@ -78,8 +78,20 @@ export const OnboardingTour = ({ onComplete }: { onComplete: () => void }) => {
     setMounted(true);
     updateCoords();
     window.addEventListener('resize', updateCoords);
-    return () => window.removeEventListener('resize', updateCoords);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'Enter') handleNext();
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'Escape') onComplete();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('resize', updateCoords);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [currentStep]);
+
 
   const updateCoords = () => {
     const target = document.getElementById(TOUR_STEPS[currentStep].targetId);

@@ -276,7 +276,13 @@ export default function Home() {
         setIsListening(false);
       };
     }
+
+    return () => {
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+    };
   }, []);
+
 
   const toggleListening = () => {
     if (isListening) {
@@ -307,8 +313,12 @@ export default function Home() {
   };
 
   const clearHistory = () => {
-    setMessages([]);
+    if (messages.length === 0) return;
+    if (window.confirm("Clear entire conversation? This cannot be undone.")) {
+      setMessages([]);
+    }
   };
+
 
   const renderMessageContent = (content: string) => {
     // Regex for metadata, including optional leading bullet point and whitespace

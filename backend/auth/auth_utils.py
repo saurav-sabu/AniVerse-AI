@@ -14,7 +14,7 @@ if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY not found in environment. Please set it in your .env file.")
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 # 1 hour
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080 # 7 days
 
 def verify_password(plain_password: str, hashed_password: str):
     try:

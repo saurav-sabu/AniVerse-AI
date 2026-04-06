@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchWithError } from '@/lib/api';
+import { fetchWithError, getTMDBImageUrl } from '@/lib/api';
 import { X, ZoomIn, ZoomOut } from 'lucide-react';
+import Image from 'next/image';
+
 
 interface RadarNode {
   id: string;
@@ -144,12 +146,15 @@ export default function VibeRadar({
             className="absolute bottom-10 bg-zinc-900/90 border border-white/20 p-4 rounded-2xl backdrop-blur-2xl flex items-center gap-4 max-w-sm shadow-2xl z-50 pointer-events-none"
           >
             {hoveredNode.poster_path && (
-              <img 
-                src={`https://image.tmdb.org/t/p/w92${hoveredNode.poster_path}`}
+              <Image 
+                src={getTMDBImageUrl(hoveredNode.poster_path, 'w500')}
                 alt={hoveredNode.title}
-                className="w-16 rounded-lg shadow-lg border border-white/10"
+                width={64}
+                height={96}
+                className="rounded-lg shadow-lg border border-white/10"
               />
             )}
+
             <div>
               <h4 className="text-white font-bold leading-tight">{hoveredNode.title}</h4>
               <p className={`text-[10px] uppercase tracking-widest font-bold mt-1 ${hoveredNode.type === 'watchlist' ? 'text-pink-400' : 'text-purple-400'}`}>

@@ -2,6 +2,10 @@ from fastapi import APIRouter, HTTPException, Depends
 from backend.tools.tmdb_tool import get_movie_trailer
 from backend.auth.get_user import get_current_user
 from backend.models.user_model import User
+from backend.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 from backend.utils.rate_limit import limiter
 from fastapi import Request

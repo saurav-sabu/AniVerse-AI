@@ -1,13 +1,27 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from collections import Counter
-from functools import lru_cache
 from backend.models.library_model import Watchlist, History
 from backend.tools.tmdb_tool import get_movie_details
+from cachetools import TTLCache
+import threading
 
-@lru_cache(maxsize=1000)
+
+_movie_cache = TTLCache(maxsize=500, ttl=3600)  # 1 hour TTL
+_cache_lock = threading.Lock()
+
 def get_cached_movie_details(movie_id: int):
-    return get_movie_details(movie_id)
+    with _cache_lock:
+        if movie_id in _movie_cache:
+            return _movie_cache[movie_id]
+    
+    details = get_movie_details(movie_id)
+    # Don't cache error responses
+    if isinstance(details, dict) and "error" not in details:
+        with _cache_lock:
+            _movie_cache[movie_id] = details
+    return details
+
 
 def calculate_persona(db: Session, user_id: int):
     # 1. Get all library items
@@ -36,7 +50,10 @@ def calculate_persona(db: Session, user_id: int):
             details = get_cached_movie_details(m_id)
             if "genres" in details:
                 for g in details["genres"]:
-                    genre_tally[g["name"]] += 1
+                    name = g.get("name")
+                    if name:
+                        genre_tally[name] += 1
+
         except (ValueError, TypeError):
             continue
                 

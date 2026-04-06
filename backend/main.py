@@ -1,6 +1,9 @@
 import os
 import sys
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
+
 from fastapi.middleware.cors import CORSMiddleware
 from backend.database import engine, Base
 from backend.routes import auth_routes, recommendation_routes, library_routes, movie_routes, user_routes, friend_routes
@@ -72,14 +75,20 @@ async def add_security_headers(request, call_next):
         script_src += " 'unsafe-eval'"  # Required for some dev tools/HMR
         
     # Crucial: Allow connections to the backend API explicitly (Defect 11 Recovery)
+    if env == "production":
+        connect_sources = f"'self' {os.getenv('ALLOWED_ORIGINS', '')}"
+    else:
+        connect_sources = f"'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:3000 {os.getenv('ALLOWED_ORIGINS', '')}"
+
     response.headers["Content-Security-Policy"] = (
         f"default-src 'self'; "
-        f"connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 {os.getenv('ALLOWED_ORIGINS', '')}; "
+        f"connect-src {connect_sources}; "
         f"img-src 'self' data: https://image.tmdb.org https://images.unsplash.com https://fastapi.tiangolo.com; "
         f"script-src {script_src}; "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
         f"font-src 'self' https://fonts.gstatic.com;"
     )
+
     return response
 
 # Include Routers
@@ -92,7 +101,19 @@ app.include_router(friend_routes.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    from backend.database import SessionLocal
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy", "database": "disconnected"}
+        )
+
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from backend.schemas.movie_schema import RecommendRequest, RecommendResponse
 from backend.agent import get_movie_recommendation
@@ -92,7 +93,8 @@ def export_watchlist(db: Session = Depends(get_db), current_user: User = Depends
         
         data = {
             "user": current_user.email,
-            "exported_at": str(datetime.utcnow()),
+            "exported_at": str(datetime.now(timezone.utc)),
+
             "vault": [
                 {"tmdb_id": m.tmdb_id, "title": m.title, "added_at": str(m.added_at)} 
                 for m in watchlist
