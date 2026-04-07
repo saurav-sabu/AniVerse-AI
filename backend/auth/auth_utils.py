@@ -10,8 +10,11 @@ import bcrypt
 
 # JWT Config
 SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY:
+if not SECRET_KEY and os.getenv("TESTING", "false").lower() != "true":
     raise RuntimeError("SECRET_KEY not found in environment. Please set it in your .env file.")
+elif not SECRET_KEY:
+    SECRET_KEY = "testing-only-secret-key-for-aniverse-ci"
+
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 10080 # 7 days

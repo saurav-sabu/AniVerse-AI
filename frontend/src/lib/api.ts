@@ -121,9 +121,10 @@ export async function registerUser(email: string, password: string): Promise<voi
 
 
     if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ detail: 'Registration failed' }));
         throw new Error(error.detail || 'Registration failed');
     }
+
 
     if (typeof window !== 'undefined') {
         localStorage.setItem('cinesync_logged_in', 'true');

@@ -45,7 +45,12 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
         access_token = create_access_token(data={"sub": new_user.email})
         
         # Explicit Response for cookie reliability
-        content = {"id": new_user.id, "email": new_user.email}
+        content = {
+            "id": new_user.id, 
+            "email": new_user.email,
+            "is_active": new_user.is_active
+        }
+
         response = JSONResponse(content=content)
         response.set_cookie(
             key="access_token", 

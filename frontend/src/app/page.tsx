@@ -39,6 +39,8 @@ export default function Home() {
   const [isRadarOpen, setIsRadarOpen] = useState(false);
   const [isPersonaCardOpen, setIsPersonaCardOpen] = useState(false);
   const [persona, setPersona] = useState<{ title: string, badge: string, desc: string, watchlist_count: number, history_count: number } | null>(null);
+  const [isTrailerLoading, setIsTrailerLoading] = useState(false);
+
   const [themeColor, setThemeColor] = useState('#ec4899'); 
   const [isHubOpen, setIsHubOpen] = useState(false);
   const [hubTab, setHubTab] = useState<HubTab>('vault');
@@ -299,7 +301,7 @@ export default function Home() {
       console.error("Cannot play trailer: No movie ID provided", movie);
       return;
     }
-    setIsLoading(true);
+    setIsTrailerLoading(true);
     try {
       const key = await getMovieTrailer(movieId);
       setTrailerKey(key);
@@ -308,8 +310,9 @@ export default function Home() {
       console.error("Failed to fetch trailer", e);
       // Removed alert for better UX. Could add a toast notification here in the future.
     } finally {
-      setIsLoading(false);
+      setIsTrailerLoading(false);
     }
+
   };
 
   const clearHistory = () => {

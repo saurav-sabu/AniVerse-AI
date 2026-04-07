@@ -16,14 +16,18 @@ RUN npm run build
 # Stage 2: Runtime
 FROM node:20-alpine AS runner
 
-WORKDIR /app/frontend
+WORKDIR /app
 
-COPY --from=builder /app/frontend/.next ./.next
+# Standalone mode only needs these files
+COPY --from=builder /app/frontend/.next/standalone ./
+COPY --from=builder /app/frontend/.next/static ./.next/static
 COPY --from=builder /app/frontend/public ./public
-COPY --from=builder /app/frontend/package*.json ./
-COPY --from=builder /app/frontend/node_modules ./node_modules
 
 EXPOSE 3000
 
-# Run in production mode
-CMD ["npm", "start"]
+ENV PORT 3000
+ENV NODE_ENV production
+
+# Next.js standalone server
+CMD ["node", "server.js"]
+

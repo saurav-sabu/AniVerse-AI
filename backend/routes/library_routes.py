@@ -153,7 +153,9 @@ from backend.utils.persona_engine import calculate_persona
 def get_user_persona(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return calculate_persona(db, current_user.id)
 @router.get("/radar")
-def get_radar_data(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@limiter.limit("10/minute")
+def get_radar_data(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+
     watchlist = db.query(Watchlist).filter(Watchlist.user_id == current_user.id).all()
     history = db.query(History).filter(History.user_id == current_user.id).all()
     
@@ -189,7 +191,9 @@ def get_radar_data(db: Session = Depends(get_db), current_user: User = Depends(g
     return {"nodes": nodes}
 
 @router.get("/swipe")
-def get_swipe_deck(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def get_swipe_deck(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+
     import requests
     import os
     

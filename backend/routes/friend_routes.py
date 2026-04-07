@@ -30,25 +30,24 @@ def send_friend_request(request: Request, friend_id: int, db: Session = Depends(
         raise HTTPException(status_code=404, detail="User not found")
         
     # Check for existing friendship/request (symmetrical)
+    u_id, f_id = sorted([current_user.id, friend_id])
     existing = db.query(Friendship).filter(
-        ((Friendship.user_id == current_user.id) & (Friendship.friend_id == friend_id)) |
-        ((Friendship.user_id == friend_id) & (Friendship.friend_id == current_user.id))
+        Friendship.user_id == u_id,
+        Friendship.friend_id == f_id
     ).first()
     
     if existing:
         if existing.status == "REJECTED":
             # Allow re-sending if it was rejected previously by resetting it
             existing.status = "PENDING"
-            existing.user_id = current_user.id # Current user becomes the sender
-            existing.friend_id = friend_id
+            existing.sender_id = current_user.id # Current user becomes the sender
             existing.created_at = datetime.now(timezone.utc)
-
             db.commit()
             return existing
         
         # Defect 15: Symmetric Auto-Accept logic
         # If the other person already sent a request, and I'm sending one now -> Mutual interest, auto-accept
-        if existing.status == "PENDING" and existing.friend_id == current_user.id:
+        if existing.status == "PENDING" and existing.sender_id != current_user.id:
             existing.status = "ACCEPTED"
             db.commit()
             logger.info(f"Mutual interest detected between {current_user.id} and {friend_id}. Auto-accepted.")
@@ -58,14 +57,17 @@ def send_friend_request(request: Request, friend_id: int, db: Session = Depends(
         
     try:
         new_request = Friendship(
-            user_id=current_user.id,
-            friend_id=friend_id,
+            user_id=u_id,
+            friend_id=f_id,
+            sender_id=current_user.id,
             status="PENDING"
         )
         db.add(new_request)
         db.commit()
         db.refresh(new_request)
         return new_request
+
+
     except Exception as e:
         db.rollback()
         logger.error(f"Failed to send friend request: {e}")
@@ -78,9 +80,11 @@ def get_pending_requests(request: Request, db: Session = Depends(get_db), curren
     Get all incoming pending friend requests.
     """
     requests = db.query(Friendship).filter(
-        Friendship.friend_id == current_user.id,
+        ((Friendship.user_id == current_user.id) | (Friendship.friend_id == current_user.id)),
+        Friendship.sender_id != current_user.id,
         Friendship.status == "PENDING"
     ).all()
+
     
     if not requests:
         return []
@@ -109,7 +113,12 @@ def accept_friend_request(request: Request, request_id: int, db: Session = Depen
     """
     Accept a friend request.
     """
-    friend_req = db.query(Friendship).filter(Friendship.id == request_id, Friendship.friend_id == current_user.id).first()
+    friend_req = db.query(Friendship).filter(
+        Friendship.id == request_id,
+        ((Friendship.user_id == current_user.id) | (Friendship.friend_id == current_user.id)),
+        Friendship.sender_id != current_user.id
+    ).first()
+
     
     if not friend_req:
         raise HTTPException(status_code=404, detail="Friend request not found")
@@ -132,7 +141,12 @@ def reject_friend_request(request: Request, request_id: int, db: Session = Depen
     """
     Reject a friend request (Defect 2).
     """
-    friend_req = db.query(Friendship).filter(Friendship.id == request_id, Friendship.friend_id == current_user.id).first()
+    friend_req = db.query(Friendship).filter(
+        Friendship.id == request_id,
+        ((Friendship.user_id == current_user.id) | (Friendship.friend_id == current_user.id)),
+        Friendship.sender_id != current_user.id
+    ).first()
+
     
     if not friend_req:
         raise HTTPException(status_code=404, detail="Friend request not found")

@@ -5,6 +5,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TESTING: "true"
+      SECRET_KEY: "ci-test-secret-key-not-for-production"
+      GROQ_API_KEY: "dummy-key"
+      TMDB_API_KEY: "dummy-key"
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

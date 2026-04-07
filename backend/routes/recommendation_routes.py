@@ -43,9 +43,12 @@ def recommend(request: Request, recommend_request: RecommendRequest, current_use
         )
         return {"response": response}
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"API Error for {current_user.email}: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while processing your request.")
+
 
 @router.get("/surprise", response_model=RecommendResponse)
 @limiter.limit("3/minute")
