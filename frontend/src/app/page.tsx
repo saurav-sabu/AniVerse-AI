@@ -59,13 +59,17 @@ export default function Home() {
       setIsAuthenticated(true);
       fetchWatchlist();
       
-      // Check for tour
-      const tourCompleted = localStorage.getItem('cinesync_tour_completed');
-      if (!tourCompleted) {
-        setShowTour(true);
-      }
+      // Check for tour with a slight delay for hydration (DEF-014)
+      setTimeout(() => {
+        const tourCompleted = localStorage.getItem('cinesync_tour_completed');
+        if (!tourCompleted) {
+          setShowTour(true);
+        }
+      }, 1000);
+
     }
   }, [router]);
+
 
 
   // Global Keyboard Shortcuts
@@ -463,6 +467,7 @@ export default function Home() {
         <div className="flex items-center gap-2">
           {persona && (
             <motion.div
+              id="tour-persona"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="hidden xl:flex items-center gap-2 pr-1 pl-3 py-1 rounded-full bg-white/5 border border-white/10 group/persona cursor-pointer hover:bg-white/10 transition-colors"
@@ -487,6 +492,7 @@ export default function Home() {
             </button>
 
             <Link
+              id="tour-swipe"
               href="/swipe"
               className="flex items-center gap-2 px-3 py-2 rounded-xl glass border border-white/10 text-white/60 hover:text-white hover:border-brand-pink/50 transition-all"
             >
@@ -499,7 +505,7 @@ export default function Home() {
 
           {/* THE HUB - Centralized Access */}
           <button
-            id="tour-hub"
+            id="tour-vault"
             onClick={() => { setHubTab('vault'); setIsHubOpen(true); }}
             className="flex items-center gap-2.5 px-4 py-2.5 bg-brand-purple text-white rounded-xl shadow-lg shadow-brand-purple/20 hover:scale-105 active:scale-95 transition-all"
           >
@@ -510,6 +516,7 @@ export default function Home() {
           <div className="h-6 w-[1px] bg-white/10 mx-1" />
 
           <button
+            id="tour-universe"
             onClick={() => setIsRadarOpen(true)}
             className="p-2.5 rounded-xl glass border border-white/10 text-white/40 hover:text-white hover:border-brand-purple/50 transition-all"
             title="Universe Radar"
@@ -550,7 +557,9 @@ export default function Home() {
         className="relative z-10 flex-1 px-4 py-8 overflow-y-auto no-scrollbar scroll-smooth"
       >
         <div className="max-w-2xl mx-auto space-y-8 pb-16">
-          <MoodBar onMoodSelect={(mood) => {
+          <MoodBar 
+            id="tour-moodbar"
+            onMoodSelect={(mood) => {
             setThemeColor(mood.color);
             setInput(mood.prompt);
           }} />
@@ -682,6 +691,7 @@ export default function Home() {
           >
             <div className="relative group/voice">
               <button
+                id="tour-voice"
                 type="button"
                 onClick={toggleListening}
                 aria-label={isListening ? "Stop listening" : "Start voice search"}
@@ -697,6 +707,7 @@ export default function Home() {
             </div>
 
             <input
+              id="tour-input"
               ref={inputRef}
               type="text"
               value={input}

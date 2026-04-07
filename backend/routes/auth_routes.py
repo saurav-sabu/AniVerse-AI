@@ -87,9 +87,8 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
     
     # Unified secure flag logic (DEF-004)
     
-    logger.debug(f"Login Cookie - Prod: {is_production} | Local: {is_localhost} | Secure: {is_production}")
-    
     content = {"access_token": access_token, "token_type": "bearer"}
+
     response = JSONResponse(content=content)
     response.set_cookie(
         key="access_token", 

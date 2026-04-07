@@ -118,4 +118,10 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
                 continue
                 
             logger.error(f"Error during agent invocation after {attempt + 1} attempts: {e}")
+            
+            # DEF: Poetic Fallback for rate limits
+            if "rate limit" in error_str or "429" in error_str:
+                return "✨ **Vibe Match Fallback**: I'm experiencing high celestial traffic right now, but based on your vibe, I highly recommend checking out some timeless classics like *Inception* or *Blade Runner 2049* while my circuits cool down! Please try again in a minute."
+                
             return "I'm sorry, I encountered an error while trying to find recommendations for you. Please try again in a moment."
+

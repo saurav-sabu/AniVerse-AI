@@ -27,6 +27,7 @@ interface CineHubDrawerProps {
 export const CineHubDrawer = ({ isOpen, onClose, initialTab = 'vault', onPlayTrailer }: CineHubDrawerProps) => {
     const [activeTab, setActiveTab] = useState<HubTab>(initialTab);
     const [selectedSocialFriend, setSelectedSocialFriend] = useState<any | null>(null);
+    const [socialError, setSocialError] = useState<string | null>(null);
 
     // Tab state management
     useEffect(() => {
@@ -62,7 +63,23 @@ export const CineHubDrawer = ({ isOpen, onClose, initialTab = 'vault', onPlayTra
                     >
                         {/* Header & Tabs */}
                         <div className="flex flex-col bg-black/20">
+                            {/* Defect 10: High-contrast error banner at top */}
+                            <AnimatePresence>
+                                {socialError && (
+                                    <motion.div 
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="bg-red-600 text-white px-6 py-2 text-[10px] font-black uppercase tracking-widest flex items-center justify-between"
+                                    >
+                                        <span>{socialError}</span>
+                                        <button onClick={() => setSocialError(null)} className="hover:bg-white/20 p-1 rounded-full transition-colors"><X className="w-3 h-3" /></button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                            
                             <div className="p-6 pb-2 flex items-center justify-between">
+
                                 <h2 className="text-xl font-black tracking-tight text-white uppercase flex items-center gap-3">
                                     <Sparkles className="w-5 h-5 text-brand-pink" />
                                     Cine Hub
@@ -146,6 +163,8 @@ export const CineHubDrawer = ({ isOpen, onClose, initialTab = 'vault', onPlayTra
                                         <SocialTab 
                                             selectedFriend={selectedSocialFriend} 
                                             setSelectedFriend={setSelectedSocialFriend} 
+                                            socialError={socialError}
+                                            setSocialError={setSocialError}
                                         />
                                     </motion.div>
                                 )}
@@ -362,7 +381,17 @@ function JournalTab() {
     );
 }
 
-function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any | null, setSelectedFriend: (f: any | null) => void }) {
+function SocialTab({ 
+    selectedFriend, 
+    setSelectedFriend,
+    socialError,
+    setSocialError
+}: { 
+    selectedFriend: any | null, 
+    setSelectedFriend: (f: any | null) => void,
+    socialError: string | null,
+    setSocialError: (err: string | null) => void
+}) {
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<UserPublic[]>([]);
     const [pending, setPending] = useState<FriendshipRequest[]>([]);
@@ -370,7 +399,6 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
     const [isLoading, setIsLoading] = useState(false);
     const [invitingIds, setInvitingIds] = useState<Set<number>>(new Set());
     const [searchPerformed, setSearchPerformed] = useState(false);
-    const [socialError, setSocialError] = useState<string | null>(null);
 
 
     const refreshData = async () => {
@@ -455,28 +483,13 @@ function SocialTab({ selectedFriend, setSelectedFriend }: { selectedFriend: any 
 
     return (
         <div className="space-y-8 pb-20">
-            {socialError && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold flex items-center justify-between">
-                    <span>{socialError}</span>
-                    <button onClick={() => setSocialError(null)} className="p-1 hover:bg-white/5 rounded-full"><X className="w-3 h-3" /></button>
-                </div>
-            )}
-
-            {isLoading && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-                    <div className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-black/60 border border-white/10 shadow-2xl">
-                        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Syncing Circle...</p>
-                    </div>
-                </div>
-            )}
-
             {selectedFriend ? (
                  <FriendProfileView data={selectedFriend} onBack={() => setSelectedFriend(null)} />
             ) : (
                 <>
                     {/* Search */}
                     <div className="space-y-4">
+
                         <h3 className="text-[10px] font-black text-white/40 uppercase tracking-widest">Discover Users</h3>
                         <form onSubmit={handleSearch} className="relative">
                             <input 
