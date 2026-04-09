@@ -111,7 +111,8 @@ def logout(request: Request, response: Response):
         key="access_token",
         httponly=True,
         samesite="lax",
-        secure=_is_secure_cookie(request)
+        secure=_is_secure_cookie(request),
+        path="/" # Ensure full session clearance (DEF-057)
     )
     return {"message": "Successfully logged out"}
 

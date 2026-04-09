@@ -374,6 +374,7 @@ def get_movie_trailer(movie_id: int) -> str:
         logger.error(f"TMDB Videos API failed: {e}")
         return f"Error fetching movie trailer: {str(e)}"
 
+@retry_on_error()
 def get_movie_details(movie_id: int) -> dict:
     """
     Get detailed information for a specific movie by its TMDB ID, including genres.

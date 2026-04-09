@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { Film, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -45,45 +45,56 @@ export default function ForgotPasswordPage() {
                     </p>
                 </div>
 
-                {message ? (
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="p-6 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-bold text-center leading-relaxed"
-                    >
-                        {message}
-                    </motion.div>
-                ) : (
-                    <form onSubmit={handleReset} className="space-y-6">
-                        <div className="space-y-2">
-                            <label htmlFor="email" className="block text-xs font-black uppercase tracking-widest text-white/40 ml-1">Email Address</label>
-                            <input
-                                id="email"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white focus:outline-none focus:border-brand-pink/50 transition-all placeholder:text-white/20"
-                                placeholder="name@example.com"
-                                required
-                                disabled={isLoading}
-                            />
-                        </div>
-
-                        {error && (
-                            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold">
-                                {error}
-                            </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="w-full py-4 bg-white text-black font-black uppercase tracking-widest text-sm rounded-2xl hover:bg-brand-pink hover:text-white transition-all duration-300 shadow-xl active:scale-[0.98] disabled:opacity-50"
+                <AnimatePresence mode="wait">
+                    {message ? (
+                        <motion.div 
+                            key="success"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="p-6 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-bold text-center leading-relaxed"
                         >
-                            {isLoading ? 'Decrypting...' : 'Send Reset Link'}
-                        </button>
-                    </form>
-                )}
+                            {message}
+                        </motion.div>
+                    ) : (
+                        <motion.form 
+                            key="form"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onSubmit={handleReset} 
+                            className="space-y-6"
+                        >
+                            <div className="space-y-2">
+                                <label htmlFor="email" className="block text-xs font-black uppercase tracking-widest text-white/40 ml-1">Email Address</label>
+                                <input
+                                    id="email"
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white focus:outline-none focus:border-brand-pink/50 transition-all placeholder:text-white/20"
+                                    placeholder="name@example.com"
+                                    required
+                                    disabled={isLoading}
+                                />
+                            </div>
+
+                            {error && (
+                                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold">
+                                    {error}
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full py-4 bg-white text-black font-black uppercase tracking-widest text-sm rounded-2xl hover:bg-brand-pink hover:text-white transition-all duration-300 shadow-xl active:scale-[0.98] disabled:opacity-50"
+                            >
+                                {isLoading ? 'Decrypting...' : 'Send Reset Link'}
+                            </button>
+                        </motion.form>
+                    )}
+                </AnimatePresence>
 
                 <div className="mt-10 text-center">
                     <Link href="/login" className="flex items-center justify-center gap-2 text-brand-pink font-bold hover:text-brand-magenta transition-colors">

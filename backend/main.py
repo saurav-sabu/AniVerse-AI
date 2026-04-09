@@ -1,11 +1,12 @@
 import os
 import sys
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from fastapi.middleware.cors import CORSMiddleware
-from backend.database import engine, Base
+from backend.database import engine, Base, get_db
 from backend.routes import auth_routes, recommendation_routes, library_routes, movie_routes, user_routes, friend_routes
 from backend.utils.logger import get_logger
 from backend.utils.rate_limit import limiter
@@ -32,14 +33,16 @@ if missing_vars and not is_testing:
 elif missing_vars and is_testing:
     logger.warning("Environment validation skipped in TESTING mode.")
 
-# Initialize Database - Creates tables if they don't exist
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables initialized successfully.")
-except Exception as e:
-    if not is_testing:
+# Initialize Database - Only in dev mode or if forced
+if not is_testing and os.getenv("ENV") != "production":
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables initialized successfully (Development).")
+    except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         sys.exit(1)
+else:
+    logger.info("Database initialization skipped (Production/Testing).")
 
 app = FastAPI(title="CineSync AI API")
 
@@ -50,7 +53,8 @@ app.add_middleware(SlowAPIMiddleware)
 
 # Enable CORS for Next.js frontend
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
-allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+# Clean origins: handle both commas and spaces (DEF-049/051)
+allowed_origins = [origin.strip() for origin in allowed_origins_env.replace(",", " ").split() if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
@@ -74,11 +78,12 @@ async def add_security_headers(request, call_next):
     if env != "production":
         script_src += " 'unsafe-eval'"  # Required for some dev tools/HMR
         
-    # Crucial: Allow connections to the backend API explicitly (Defect 11 Recovery)
+    # Crucial: Allow connections to the backend API explicitly (DEF-051 Fix)
+    origin_list = " ".join(allowed_origins)
     if env == "production":
-        connect_sources = f"'self' {os.getenv('ALLOWED_ORIGINS', '')}"
+        connect_sources = f"'self' {origin_list}"
     else:
-        connect_sources = f"'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:3000 {os.getenv('ALLOWED_ORIGINS', '')}"
+        connect_sources = f"'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:3000 {origin_list}"
 
     response.headers["Content-Security-Policy"] = (
         f"default-src 'self'; "
@@ -100,12 +105,12 @@ app.include_router(user_routes.router)
 app.include_router(friend_routes.router)
 
 @app.get("/health")
-async def health():
-    from backend.database import SessionLocal
+async def health(db: Session = Depends(get_db)):
+    """
+    Health check using the pool-managed get_db dependency (DEF-059).
+    """
     try:
-        db = SessionLocal()
         db.execute(text("SELECT 1"))
-        db.close()
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         logger.error(f"Health check failed: {e}")

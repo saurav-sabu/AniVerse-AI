@@ -104,10 +104,14 @@ export default function Home() {
   }, []);
 
   // Combined auto-scroll logic
+  // Combined auto-scroll logic (DEF-063)
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-    }
+    const timer = requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+      }
+    });
+    return () => cancelAnimationFrame(timer);
   }, [messages, isLoading]);
 
   async function fetchPersona() {

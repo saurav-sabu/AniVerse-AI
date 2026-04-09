@@ -108,6 +108,14 @@ def add_to_history(request: Request, movie: LibraryCreate, current_user: User = 
         return new_entry
     except Exception as e:
         db.rollback()
+        # Handle race condition/duplicate in history (DEF-058)
+        existing = db.query(History).filter(
+            History.user_id == current_user.id,
+            History.tmdb_id == movie.tmdb_id
+        ).first()
+        if existing:
+            return existing
+            
         logger.error(f"Failed to add to history: {e}")
         raise HTTPException(status_code=500, detail="An error occurred while adding to history")
 
@@ -211,17 +219,33 @@ def get_swipe_deck(request: Request, current_user: User = Depends(get_current_us
     params = {"api_key": TMDB_API_KEY, "language": "en-US"}
     
     try:
-        response = requests.get(endpoint, params=params, timeout=5)
-        response.raise_for_status()
-        trending = response.json().get("results", [])
+        max_pages = 3
+        trending = []
+        for page in range(1, max_pages + 1):
+            temp_params = params.copy()
+            temp_params["page"] = page
+            response = requests.get(endpoint, params=temp_params, timeout=5)
+            response.raise_for_status()
+            results = response.json().get("results", [])
+            trending.extend(results)
+            
+            # Count how many we'd have after filtering
+            potential_deck = [m for m in trending if str(m.get("id")) not in user_movie_ids]
+            if len(potential_deck) >= 15:
+                break
+                
     except Exception as e:
         logger.error(f"Failed to fetch trending movies from TMDB: {e}")
-        trending = [] # Fallback to empty deck if TMDB is down
+        trending = [] # Fallback
     
     # 3. Filter and format
     deck = []
     for m in trending:
         if str(m.get("id")) not in user_movie_ids:
+            # Avoid duplicates if they appear across pages
+            if any(d["id"] == str(m.get("id")) for d in deck):
+                continue
+                
             poster_path = m.get("poster_path")
             if poster_path:
                 poster_path = poster_path if poster_path.startswith('/') else f"/{poster_path}"

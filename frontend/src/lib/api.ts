@@ -102,61 +102,48 @@ export const logout = async () => {
 }
 
 export async function loginUser(email: string, password: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    await fetchWithError('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-        credentials: 'include',
     });
 
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Login failed' }));
-        throw new Error(error.detail || 'Login failed');
-    }
-
-    // Cookie is set by the backend. We flag that we are logged in for the UI.
     if (typeof window !== 'undefined') {
         localStorage.setItem('cinesync_logged_in', 'true');
-        console.log("Auth session established successfully.");
     }
 }
 
 export async function registerUser(email: string, password: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    await fetchWithError('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-        credentials: 'include',
     });
-
-
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Registration failed' }));
-        throw new Error(error.detail || 'Registration failed');
-    }
-
 
     if (typeof window !== 'undefined') {
         localStorage.setItem('cinesync_logged_in', 'true');
-        console.log("Auth session established successfully via registration.");
     }
 }
 
 export async function forgotPassword(email: string): Promise<string> {
-    const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+        });
 
-    if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: 'Failed to request password reset' }));
-        throw new Error(error.detail || 'Failed to request password reset');
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ detail: 'Reset failed' }));
+            throw new Error(error.detail || 'Failed to request password reset');
+        }
+
+        const data = await response.json().catch(() => ({ message: 'Request submitted successfully' }));
+        return data.message;
+    } catch (error) {
+        console.error("Forgot password error:", error);
+        throw error instanceof Error ? error : new Error("Connection failed");
     }
-
-    const data = await response.json();
-    return data.message;
 }
 
 export async function getRecommendation(prompt: string, history: Message[] = [], signal?: AbortSignal): Promise<string> {

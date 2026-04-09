@@ -1,6 +1,6 @@
 import logging
+from logging.handlers import RotatingFileHandler
 import os
-import json
 from datetime import datetime
 
 class JSONFormatter(logging.Formatter):
@@ -42,8 +42,12 @@ def get_logger(name: str):
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir)
             
-            log_filename = datetime.now().strftime("%Y-%m-%d") + "_cinesync.log"
-            file_handler = logging.FileHandler(os.path.join(log_dir, log_filename))
+            log_filename = "cinesync.log"
+            file_handler = RotatingFileHandler(
+                os.path.join(log_dir, log_filename),
+                maxBytes=5*1024*1024, # 5MB
+                backupCount=3
+            )
             file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
             
             console_handler = logging.StreamHandler()

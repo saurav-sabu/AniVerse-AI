@@ -1,4 +1,5 @@
 import os
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 from langgraph.prebuilt import create_react_agent
 from backend.tools.tmdb_tool import (
@@ -86,13 +87,18 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
     
     for attempt in range(max_attempts):
         try:
+            # Prune history to avoid context window overflow (DEF-062)
+            # We keep the last 10 messages to protect the token budget
+            if history and len(history) > 10:
+                history = history[-10:]
+            
             # Build the messages list starting with history
             messages = []
             if history:
                 for role, content in history:
                     messages.append((role, content))
             
-            # The current user query (already has context if applicable)
+            # The current user query
             messages.append(("user", user_query))
             
             inputs = {"messages": messages}
@@ -100,12 +106,15 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
             
             result = agent.invoke(inputs, config=config)
             
-            # Filter for the last AI message
-            ai_messages = [m for m in result["messages"] if hasattr(m, "content") and m.__class__.__name__ == "AIMessage"]
+            # Extract AI message robustly using type checking (DEF-055)
+            # This is more resilient than string class name checks
+            ai_messages = [m for m in result["messages"] if isinstance(m, AIMessage)]
             if ai_messages:
                 return ai_messages[-1].content
                 
-            return result["messages"][-1].content
+            # Final fallback: return the content of the last message in the sequence
+            last_msg = result["messages"][-1]
+            return getattr(last_msg, "content", str(last_msg))
             
         except Exception as e:
             error_str = str(e).lower()

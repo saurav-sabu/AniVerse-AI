@@ -14,6 +14,17 @@ import {
     UserPublic, FriendshipRequest, FriendProfile 
 } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { type MovieMetadata } from './MovieCard';
+
+export interface JournalEntry {
+    id: number;
+    tmdb_id: string;
+    title: string;
+    poster_path: string;
+    rating?: number;
+    notes?: string;
+    viewed_at: string;
+}
 
 export type HubTab = 'vault' | 'history' | 'social';
 
@@ -21,12 +32,12 @@ interface CineHubDrawerProps {
     isOpen: boolean;
     onClose: () => void;
     initialTab?: HubTab;
-    onPlayTrailer: (movie: any) => void;
+    onPlayTrailer: (movie: MovieMetadata) => void;
 }
 
 export const CineHubDrawer = ({ isOpen, onClose, initialTab = 'vault', onPlayTrailer }: CineHubDrawerProps) => {
     const [activeTab, setActiveTab] = useState<HubTab>(initialTab);
-    const [selectedSocialFriend, setSelectedSocialFriend] = useState<any | null>(null);
+    const [selectedSocialFriend, setSelectedSocialFriend] = useState<FriendProfile | null>(null);
     const [socialError, setSocialError] = useState<string | null>(null);
 
     // Tab state management
@@ -179,8 +190,8 @@ export const CineHubDrawer = ({ isOpen, onClose, initialTab = 'vault', onPlayTra
 
 // --- Sub-Components for Tabs ---
 
-function VaultTab({ onPlayTrailer }: { onPlayTrailer: (movie: any) => void }) {
-    const [watchlist, setWatchlist] = useState<any[]>([]);
+function VaultTab({ onPlayTrailer }: { onPlayTrailer: (movie: MovieMetadata) => void }) {
+    const [watchlist, setWatchlist] = useState<JournalEntry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchWL = async () => {
@@ -204,7 +215,7 @@ function VaultTab({ onPlayTrailer }: { onPlayTrailer: (movie: any) => void }) {
         }
     };
 
-    const handleMarkWatched = async (movie: any) => {
+    const handleMarkWatched = async (movie: JournalEntry) => {
         try {
             await addToHistory(String(movie.tmdb_id), movie.title, movie.poster_path);
             await removeFromWatchlist(String(movie.tmdb_id));
@@ -287,7 +298,7 @@ function VaultTab({ onPlayTrailer }: { onPlayTrailer: (movie: any) => void }) {
 }
 
 function JournalTab() {
-    const [history, setHistory] = useState<any[]>([]);
+    const [history, setHistory] = useState<JournalEntry[]>([]);
     const [summary, setSummary] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -387,8 +398,8 @@ function SocialTab({
     socialError,
     setSocialError
 }: { 
-    selectedFriend: any | null, 
-    setSelectedFriend: (f: any | null) => void,
+    selectedFriend: FriendProfile | null, 
+    setSelectedFriend: (f: FriendProfile | null) => void,
     socialError: string | null,
     setSocialError: (err: string | null) => void
 }) {
@@ -577,7 +588,7 @@ function SocialTab({
     );
 }
 
-const FriendProfileView = ({ data, onBack }: { data: any, onBack: () => void }) => {
+const FriendProfileView = ({ data, onBack }: { data: FriendProfile, onBack: () => void }) => {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 h-full overflow-y-auto no-scrollbar pb-10">
             <div className="flex flex-col items-center text-center space-y-4 p-8 rounded-[2.5rem] bg-white/5 border border-white/10 relative overflow-hidden shadow-2xl">
