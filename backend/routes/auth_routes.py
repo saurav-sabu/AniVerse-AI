@@ -25,7 +25,7 @@ def _is_secure_cookie(request: Request) -> bool:
 def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
     from backend.utils.logger import get_logger
     logger = get_logger(__name__)
-    logger.info(f"Registering user: {user.email}")
+    logger.debug(f"Registering user: {user.email}")
     
     is_production = os.getenv("ENV") == "production"
     logger.debug(f"Cookie Security - Production: {is_production}")
@@ -62,7 +62,7 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
         )
 
         
-        logger.info(f"User registered successfully: {user.email}")
+        logger.debug(f"User registered successfully: {user.email}")
         return response
     except HTTPException:
         raise
@@ -102,6 +102,19 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
     
     return response
 
+@router.post("/logout")
+def logout(request: Request, response: Response):
+    """
+    Clears the access_token HttpOnly cookie (DEF-044).
+    """
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        samesite="lax",
+        secure=_is_secure_cookie(request)
+    )
+    return {"message": "Successfully logged out"}
+
 @router.post("/forgot-password")
 @limiter.limit("3/minute")
 def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
@@ -110,9 +123,9 @@ def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session =
     
     user = db.query(User).filter(User.email == body.email).first()
     if not user:
-        # Avoid user enumeration by returning 200 even if user doesn't exist
+        # Avoid user enumeration by returning identical message (DEF-045)
         return {"message": "If this email is registered, a reset link will be sent shortly."}
     
     # Mock sending email
-    logger.info(f"MOCK PASSWORD RESET: Link sent to {body.email} (valid for 1 hour)")
-    return {"message": "Success! Check your inbox for the reset link."}
+    logger.debug(f"MOCK PASSWORD RESET: Link sent to {body.email}")
+    return {"message": "If this email is registered, a reset link will be sent shortly."}

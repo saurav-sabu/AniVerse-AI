@@ -1,10 +1,30 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 import { Film, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { forgotPassword } from '@/lib/api';
 
 export default function ForgotPasswordPage() {
+    const [email, setEmail] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [message, setMessage] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleReset = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+        try {
+            const res = await forgotPassword(email);
+            setMessage(res);
+        } catch (err: any) {
+            setError(err.message || "Failed to send reset link.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <main className="relative flex flex-col items-center justify-center min-h-screen p-4 overflow-hidden">
@@ -21,9 +41,49 @@ export default function ForgotPasswordPage() {
                     <Film className="w-12 h-12 text-brand-pink mb-4" />
                     <h1 className="text-3xl font-extrabold text-gradient">Reset Password</h1>
                     <p className="text-white/50 mt-2 text-center text-balance">
-                        Password reset is currently unavailable. Please contact support for assistance.
+                        Enter your email address and we'll send you a link to reset your password.
                     </p>
                 </div>
+
+                {message ? (
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="p-6 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-bold text-center leading-relaxed"
+                    >
+                        {message}
+                    </motion.div>
+                ) : (
+                    <form onSubmit={handleReset} className="space-y-6">
+                        <div className="space-y-2">
+                            <label htmlFor="email" className="block text-xs font-black uppercase tracking-widest text-white/40 ml-1">Email Address</label>
+                            <input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-white focus:outline-none focus:border-brand-pink/50 transition-all placeholder:text-white/20"
+                                placeholder="name@example.com"
+                                required
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        {error && (
+                            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold">
+                                {error}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full py-4 bg-white text-black font-black uppercase tracking-widest text-sm rounded-2xl hover:bg-brand-pink hover:text-white transition-all duration-300 shadow-xl active:scale-[0.98] disabled:opacity-50"
+                        >
+                            {isLoading ? 'Decrypting...' : 'Send Reset Link'}
+                        </button>
+                    </form>
+                )}
 
                 <div className="mt-10 text-center">
                     <Link href="/login" className="flex items-center justify-center gap-2 text-brand-pink font-bold hover:text-brand-magenta transition-colors">

@@ -28,7 +28,7 @@ def test_login_wrong_credentials():
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy"}
+    assert response.json() == {"status": "healthy", "database": "connected"}
 
 def test_recommend_unauthenticated():
     response = client.post("/recommend", json={

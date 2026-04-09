@@ -81,11 +81,22 @@ export const isLoggedIn = () => {
     }
 }
 
-export const logout = () => {
+export const logout = async () => {
     if (typeof window !== 'undefined') {
         localStorage.removeItem('cinesync_logged_in');
         // Clear all session storage as well for safety
         sessionStorage.clear();
+        
+        try {
+            // Defect 44: Call backend to clear HttpOnly cookie
+            await fetch(`${API_BASE_URL}/auth/logout`, { 
+                method: 'POST', 
+                credentials: 'include' 
+            });
+        } catch (e) {
+            console.error("Backend logout failed", e);
+        }
+        
         window.location.href = '/login';
     }
 }
@@ -165,8 +176,8 @@ export async function getRecommendation(prompt: string, history: Message[] = [],
     }
 }
 
-export async function getSurpriseRecommendation(): Promise<string> {
-    const data = await fetchWithError('/recommend/surprise');
+export async function getSurpriseRecommendation(signal?: AbortSignal): Promise<string> {
+    const data = await fetchWithError('/recommend/surprise', { signal });
     return data.response;
 }
 export async function addToWatchlist(tmdb_id: string, title: string, poster_path: string): Promise<void> {

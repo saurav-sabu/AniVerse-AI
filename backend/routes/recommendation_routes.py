@@ -86,7 +86,8 @@ def surprise_me(request: Request, db: Session = Depends(get_db), current_user: U
         raise HTTPException(status_code=500, detail="Failed to generate a surprise recommendation.")
 
 @router.get("/export-watchlist")
-def export_watchlist(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@limiter.limit("5/minute")
+def export_watchlist(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Endpoint to export the user's entire cinematic library (Vault + History) as JSON.
     """

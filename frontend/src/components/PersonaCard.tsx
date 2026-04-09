@@ -146,7 +146,11 @@ export const PersonaCard = ({ persona, stats, onClose }: PersonaCardProps) => {
                   url: window.location.href,
                 };
                 if (navigator.share) {
-                  navigator.share(shareData);
+                  navigator.share(shareData).catch((err) => {
+                    if (err.name !== 'AbortError') {
+                      console.error('Share failed:', err);
+                    }
+                  });
                 } else {
                   copy(`${shareData.text} ${shareData.url}`);
                 }

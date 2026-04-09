@@ -84,8 +84,11 @@ def add_to_history(request: Request, movie: LibraryCreate, current_user: User = 
     
     if existing:
         existing.viewed_at = func.now()
-        existing.rating = movie.rating
-        existing.notes = movie.notes
+        # Only update rating/notes if explicitly provided to avoid overwriting (DEF-043)
+        if movie.rating is not None:
+            existing.rating = movie.rating
+        if movie.notes is not None:
+            existing.notes = movie.notes
         db.commit()
         db.refresh(existing)
         return existing

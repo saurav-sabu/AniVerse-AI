@@ -22,7 +22,9 @@ def search_users(request: Request, q: str, db: Session = Depends(get_db), curren
     related_ids = set([r[0] for r in id_list_1] + [r[0] for r in id_list_2])
     related_ids.add(current_user.id) # Safety check: exclude self again
     
-    users_query = db.query(User).filter(User.email.ilike(f"%{q}%"))
+    # Escape wildcards for security (DEF-041)
+    safe_q = q.replace("%", "\\%").replace("_", "\\_")
+    users_query = db.query(User).filter(User.email.ilike(f"%{safe_q}%"))
     if related_ids:
         users_query = users_query.filter(~User.id.in_(list(related_ids)))
         

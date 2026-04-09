@@ -90,7 +90,7 @@ def get_pending_requests(request: Request, db: Session = Depends(get_db), curren
         return []
 
     # Batch query users to avoid N+1 (Defect 4 & 5)
-    sender_ids = [r.user_id for r in requests]
+    sender_ids = [r.sender_id for r in requests]
     senders = db.query(User).filter(User.id.in_(sender_ids)).all()
     user_map = {u.id: u.email for u in senders}
     
@@ -102,7 +102,7 @@ def get_pending_requests(request: Request, db: Session = Depends(get_db), curren
             friend_id=r.friend_id,
             status=r.status,
             created_at=r.created_at,
-            sender_email=user_map.get(r.user_id, "Unknown")
+            sender_email=user_map.get(r.sender_id, "Unknown")
         ))
         
     return result

@@ -47,7 +47,15 @@ export default function Home() {
   const [showTour, setShowTour] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const router = useRouter();
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
   // Auth & Data fetch
   useEffect(() => {
@@ -163,10 +171,14 @@ export default function Home() {
 
   const handleSurpriseMe = async () => {
     if (isLoading) return;
+    // Abort existing request (DEF-046)
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getSurpriseRecommendation();
+      const response = await getSurpriseRecommendation(abortControllerRef.current.signal);
       const assistantMessage: Message = { 
         id: Date.now().toString(),
         role: 'assistant', 
@@ -185,7 +197,10 @@ export default function Home() {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const controller = new AbortController();
+    // Abort existing request (DEF-046)
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
     const userMessage: Message = { 
       id: Date.now().toString(),
       role: 'user', 
@@ -204,7 +219,7 @@ export default function Home() {
     try {
       setError(null);
       // Pass the previous messages as history. The current input is handled separately by the backend.
-      const response = await getRecommendation(input, messages, controller.signal);
+      const response = await getRecommendation(input, messages, abortControllerRef.current?.signal);
       const assistantMessage: Message = { 
         id: (Date.now() + 1).toString(),
         role: 'assistant', 

@@ -46,8 +46,12 @@ def generate_journal_summary(history_entries):
     ])
 
     chain = prompt | llm
-    response = chain.invoke({})
-    content = response.content
+    try:
+        response = chain.invoke({})
+        content = response.content
+    except Exception as e:
+        logger.error(f"Failed to generate journal summary: {e}")
+        return "Your cinematic aura is currently in a state of flux. Please try again later to reveal your insights."
 
     # Clean up <think> tags if the model still includes them
     if "<think>" in content and "</think>" in content:

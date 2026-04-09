@@ -52,7 +52,7 @@ export const MovieCard = ({
           src={getTMDBImageUrl(movie.poster)}
           alt={movie.title}
           fill
-          unoptimized={true}
+          unoptimized={false}
           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
           loading="lazy"
           placeholder="blur"
