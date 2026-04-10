@@ -9,9 +9,11 @@ from backend.auth.auth_utils import get_password_hash, verify_password, create_a
 from backend.utils.rate_limit import limiter
 from fastapi import Request
 
-router = APIRouter(prefix="/auth", tags=["auth"])
-
+from backend.utils.logger import get_logger
 from fastapi.responses import JSONResponse
+
+logger = get_logger(__name__)
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 def _is_secure_cookie(request: Request) -> bool:
     if os.getenv("ENV") != "production":
@@ -23,8 +25,6 @@ def _is_secure_cookie(request: Request) -> bool:
 @router.post("/register", response_model=UserResponse)
 @limiter.limit("5/minute")
 def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
-    from backend.utils.logger import get_logger
-    logger = get_logger(__name__)
     logger.debug(f"Registering user: {user.email}")
     
     is_production = os.getenv("ENV") == "production"
@@ -73,8 +73,6 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login")
 @limiter.limit("10/minute")
 def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
-    from backend.utils.logger import get_logger
-    logger = get_logger(__name__)
     
     db_user = db.query(User).filter(User.email == user.email).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
@@ -119,8 +117,6 @@ def logout(request: Request, response: Response):
 @router.post("/forgot-password")
 @limiter.limit("3/minute")
 def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    from backend.utils.logger import get_logger
-    logger = get_logger(__name__)
     
     user = db.query(User).filter(User.email == body.email).first()
     if not user:

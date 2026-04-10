@@ -57,18 +57,19 @@ def surprise_me(request: Request, db: Session = Depends(get_db), current_user: U
     Endpoint to get a surprise movie recommendation based on persona and history.
     """
     try:
-        # 1. Fetch user's library stats for context
+        # 1. Fetch user's library IDs and titles for context
         watchlist = db.query(Watchlist).filter(Watchlist.user_id == current_user.id).all()
         history = db.query(History).filter(History.user_id == current_user.id).all()
         
-        excluded_titles = list(set([m.title for m in watchlist + history]))
+        excluded_ids = list(set([str(m.tmdb_id) for m in watchlist + history]))
+        recent_titles = [m.title for m in (watchlist + history)[-5:]]
         
         # 2. Build a context-rich query for the agent
         context_prompt = (
             f"I am a user with {len(watchlist)} movies in my Vault and {len(history)} movies in my History. "
-            f"My favorite genres seem to be represented by these titles: {', '.join(excluded_titles[-5:]) if excluded_titles else 'None yet'}. "
+            f"Recent interests include: {', '.join(recent_titles) if recent_titles else 'None yet'}. "
             "GIVE ME ONE absolute surprise recommendation that matches my vibe but isn't something I've already seen. "
-            f"EXCLUDE these titles from your search: {', '.join(excluded_titles) if excluded_titles else 'None'}. "
+            f"CRITICAL: EXCLUDE these TMDB IDs from your selection: {', '.join(excluded_ids) if excluded_ids else 'None'}. "
             "Reason why this is a 'surprise' for me and provide it in [METADATA: {...}] format."
         )
         
@@ -100,11 +101,11 @@ def export_watchlist(request: Request, db: Session = Depends(get_db), current_us
             "exported_at": str(datetime.now(timezone.utc)),
 
             "vault": [
-                {"tmdb_id": m.tmdb_id, "title": m.title, "added_at": str(m.added_at)} 
+                {"tmdb_id": m.tmdb_id, "title": m.title, "added_at": str(m.added_at), "genres": m.genres} 
                 for m in watchlist
             ],
             "history": [
-                {"tmdb_id": m.tmdb_id, "title": m.title, "viewed_at": str(m.viewed_at), "rating": m.rating, "notes": m.notes} 
+                {"tmdb_id": m.tmdb_id, "title": m.title, "viewed_at": str(m.viewed_at), "rating": m.rating, "notes": m.notes, "genres": m.genres} 
                 for m in history
             ]
         }

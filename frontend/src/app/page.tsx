@@ -33,12 +33,12 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const [watchlist, setWatchlist] = useState<any[]>([]);
+  const [watchlist, setWatchlist] = useState<LibraryItem[]>([]);
   const [selectedTrailer, setSelectedTrailer] = useState<MovieMetadata | null>(null);
   const [trailerKey, setTrailerKey] = useState<string | null>(null);
   const [isRadarOpen, setIsRadarOpen] = useState(false);
   const [isPersonaCardOpen, setIsPersonaCardOpen] = useState(false);
-  const [persona, setPersona] = useState<{ title: string, badge: string, desc: string, watchlist_count: number, history_count: number } | null>(null);
+  const [persona, setPersona] = useState<PersonaData | null>(null);
   const [isTrailerLoading, setIsTrailerLoading] = useState(false);
 
   const [themeColor, setThemeColor] = useState('#ec4899'); 

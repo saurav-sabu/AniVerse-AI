@@ -10,6 +10,35 @@ export interface RecommendResponse {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
+export interface LibraryItem {
+    id: number;
+    tmdb_id: string;
+    title: string;
+    poster_path: string | null;
+    genres?: string | null;
+    rating?: number | null;
+    notes?: string | null;
+    added_at?: string | null;
+    viewed_at?: string | null;
+}
+
+export interface PersonaData {
+    title: string;
+    badge: string;
+    desc: string;
+    watchlist_count: number;
+    history_count: number;
+}
+
+export interface RadarNode {
+    id: string;
+    title: string;
+    poster_path: string | null;
+    x: number;
+    y: number;
+    type: 'watchlist' | 'history';
+}
+
 export function getTMDBImageUrl(path: string | null, size: 'w500' | 'original' = 'w500'): string {
     const fallback = "https://images.unsplash.com/photo-1440404653325-ab127d49abc1?q=80&w=500&auto=format&fit=crop";
     if (!path) return fallback;
@@ -174,7 +203,7 @@ export async function addToWatchlist(tmdb_id: string, title: string, poster_path
     });
 }
 
-export async function getWatchlist(): Promise<any[]> {
+export async function getWatchlist(): Promise<LibraryItem[]> {
     return fetchWithError('/library/watchlist');
 }
 
@@ -191,7 +220,7 @@ export async function addToHistory(tmdb_id: string, title: string, poster_path: 
     });
 }
 
-export async function getHistory(): Promise<any[]> {
+export async function getHistory(): Promise<LibraryItem[]> {
     return fetchWithError('/library/history');
 }
 
@@ -212,7 +241,7 @@ export async function getMovieTrailer(tmdb_id: string): Promise<string> {
     return data.key;
 }
 
-export async function getPersona(): Promise<{ title: string, badge: string, desc: string, watchlist_count: number, history_count: number }> {
+export async function getPersona(): Promise<PersonaData> {
     return fetchWithError('/library/persona');
 }
 
@@ -260,9 +289,9 @@ export interface FriendProfile {
 }
 
 export interface FriendLibraryData {
-    watchlist: any[];
-    history: any[];
-    persona: { title: string, badge: string, desc: string, watchlist_count: number, history_count: number };
+    watchlist: LibraryItem[];
+    history: LibraryItem[];
+    persona: PersonaData;
     profile: UserPublic;
 }
 
@@ -300,11 +329,6 @@ export async function removeFriend(friendId: number): Promise<{ message: string 
     return fetchWithError(`/friends/${friendId}`, { method: 'DELETE' });
 }
 
-export async function getFriendLibrary(friendId: number): Promise<{ 
-    watchlist: any[], 
-    history: any[], 
-    persona: { title: string, badge: string, desc: string, watchlist_count: number, history_count: number },
-    profile: UserPublic 
-}> {
+export async function getFriendLibrary(friendId: number): Promise<FriendLibraryData> {
     return fetchWithError(`/friends/${friendId}/library`);
 }

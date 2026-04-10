@@ -104,6 +104,15 @@ app.include_router(movie_routes.router)
 app.include_router(user_routes.router)
 app.include_router(friend_routes.router)
 
+# Global Exception Handler (DEF-040)
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global exception caught: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred. Please try again later."}
+    )
+
 @app.get("/health")
 async def health(db: Session = Depends(get_db)):
     """

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Optional
 
@@ -23,5 +23,4 @@ class LibraryResponse(LibraryBase):
     added_at: Optional[datetime] = None  # For watchlist
     viewed_at: Optional[datetime] = None # For history
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

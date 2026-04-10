@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
 from backend.schemas.user_schema import UserPublic
@@ -11,8 +11,7 @@ class FriendshipRequest(BaseModel):
     created_at: datetime
     sender_email: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class FriendProfile(BaseModel):
     id: int

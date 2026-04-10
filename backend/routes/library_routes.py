@@ -13,6 +13,10 @@ logger = get_logger(__name__)
 from backend.models.user_model import User
 from backend.utils.rate_limit import limiter
 from fastapi import Request
+import os
+import httpx
+from backend.utils.persona_engine import calculate_persona
+from backend.utils.journal_analyzer import generate_journal_summary
 
 router = APIRouter(prefix="/library", tags=["library"])
 
@@ -159,8 +163,6 @@ def get_journal_summary(request: Request, current_user: User = Depends(get_curre
 def get_history(skip: int = 0, limit: int = 20, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return db.query(History).filter(History.user_id == current_user.id).order_by(History.viewed_at.desc()).offset(skip).limit(limit).all()
 
-from backend.utils.persona_engine import calculate_persona
-
 @router.get("/persona")
 @limiter.limit("5/minute")
 def get_user_persona(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -207,9 +209,6 @@ def get_radar_data(request: Request, db: Session = Depends(get_db), current_user
 @router.get("/swipe")
 @limiter.limit("5/minute")
 async def get_swipe_deck(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-
-    import os
-    import httpx
     
     # 1. Get user library IDs
     watchlist = db.query(Watchlist).filter(Watchlist.user_id == current_user.id).all()
@@ -262,7 +261,8 @@ async def get_swipe_deck(request: Request, current_user: User = Depends(get_curr
                 "title": m.get("title"),
                 "poster": poster_url,
                 "overview": m.get("overview"),
-                "vote_average": m.get("vote_average")
+                "vote_average": m.get("vote_average"),
+                "genre_ids": m.get("genre_ids", [])
             })
             
     return {"deck": deck[:15]} # Return 15 fresh items

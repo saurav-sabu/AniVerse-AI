@@ -11,20 +11,10 @@ import {
     getWatchlist, removeFromWatchlist, addToHistory, getHistory, updateHistoryEntry, getJournalSummary, 
     getTMDBImageUrl, searchUsers, sendFriendRequest, getPendingRequests, acceptFriendRequest, rejectFriendRequest, 
     getFriendList, getFriendLibrary, removeFriend, exportWatchlist, 
-    UserPublic, FriendshipRequest, FriendProfile, FriendLibraryData
+    UserPublic, FriendshipRequest, FriendProfile, FriendLibraryData, LibraryItem, PersonaData
 } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { type MovieMetadata } from './MovieCard';
-
-export interface JournalEntry {
-    id: number;
-    tmdb_id: string;
-    title: string;
-    poster_path: string;
-    rating?: number;
-    notes?: string;
-    viewed_at: string;
-}
 
 export type HubTab = 'vault' | 'history' | 'social';
 
@@ -191,7 +181,7 @@ export const CineHubDrawer = ({ isOpen, onClose, initialTab = 'vault', onPlayTra
 // --- Sub-Components for Tabs ---
 
 function VaultTab({ onPlayTrailer }: { onPlayTrailer: (movie: MovieMetadata) => void }) {
-    const [watchlist, setWatchlist] = useState<JournalEntry[]>([]);
+    const [watchlist, setWatchlist] = useState<LibraryItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     const fetchWL = async () => {
@@ -215,7 +205,7 @@ function VaultTab({ onPlayTrailer }: { onPlayTrailer: (movie: MovieMetadata) => 
         }
     };
 
-    const handleMarkWatched = async (movie: JournalEntry) => {
+    const handleMarkWatched = async (movie: LibraryItem) => {
         try {
             await addToHistory(String(movie.tmdb_id), movie.title, movie.poster_path);
             await removeFromWatchlist(String(movie.tmdb_id));
@@ -303,7 +293,7 @@ function VaultTab({ onPlayTrailer }: { onPlayTrailer: (movie: MovieMetadata) => 
 }
 
 function JournalTab() {
-    const [history, setHistory] = useState<JournalEntry[]>([]);
+    const [history, setHistory] = useState<LibraryItem[]>([]);
     const [summary, setSummary] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -616,7 +606,7 @@ const FriendProfileView = ({ data, onBack }: { data: FriendLibraryData, onBack: 
             <div className="space-y-4">
                 <h3 className="text-[10px] font-black text-white/40 uppercase tracking-widest pl-1">Recent Watches</h3>
                 <div className="grid grid-cols-2 gap-3">
-                    {data.history.length > 0 ? data.history.slice(0, 4).map((m: any) => (
+                    {data.history.length > 0 ? data.history.slice(0, 4).map((m: LibraryItem) => (
                         <div key={m.tmdb_id} className="relative aspect-[2/3] rounded-2xl overflow-hidden border border-white/5 shadow-lg group">
                             <Image src={getTMDBImageUrl(m.poster_path)} alt={m.title} fill sizes="(max-width: 448px) 40vw, 150px" className="object-cover transition-transform group-hover:scale-110" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
