@@ -577,7 +577,6 @@ export default function Home() {
       >
         <div className="max-w-2xl mx-auto space-y-8 pb-16">
           <MoodBar 
-            id="tour-moodbar"
             onMoodSelect={(mood) => {
             setThemeColor(mood.color);
             setInput(mood.prompt);
@@ -726,7 +725,6 @@ export default function Home() {
             </div>
 
             <input
-              id="tour-input"
               ref={inputRef}
               type="text"
               value={input}

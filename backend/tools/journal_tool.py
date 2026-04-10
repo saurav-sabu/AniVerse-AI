@@ -3,6 +3,7 @@ from langchain_core.runnables import RunnableConfig
 from backend.database import SessionLocal
 from backend.models.user_model import User
 from backend.models.library_model import History
+from sqlalchemy.sql import func
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)

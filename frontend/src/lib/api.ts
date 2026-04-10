@@ -218,7 +218,9 @@ export async function getPersona(): Promise<{ title: string, badge: string, desc
 
 export async function exportWatchlist(): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/recommend/export-watchlist`, {
-        headers: {},
+        headers: {
+            'Accept': 'application/json'
+        },
         credentials: 'include'
     });
 
@@ -255,6 +257,13 @@ export interface FriendProfile {
     id: number;
     email: string;
     status: string;
+}
+
+export interface FriendLibraryData {
+    watchlist: any[];
+    history: any[];
+    persona: { title: string, badge: string, desc: string, watchlist_count: number, history_count: number };
+    profile: UserPublic;
 }
 
 export async function searchUsers(q: string): Promise<UserPublic[]> {

@@ -19,7 +19,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 # Standalone mode only needs these files
-COPY --from=builder /app/frontend/.next/standalone ./
+COPY --from=builder /app/frontend/.next/standalone/frontend ./
 COPY --from=builder /app/frontend/.next/static ./.next/static
 COPY --from=builder /app/frontend/public ./public
 

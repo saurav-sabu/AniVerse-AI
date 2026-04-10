@@ -6,6 +6,7 @@ class LibraryBase(BaseModel):
     tmdb_id: str
     title: str
     poster_path: Optional[str] = None
+    genres: Optional[str] = None # Comma-separated genre names
     rating: Optional[int] = Field(None, ge=1, le=5)
     notes: Optional[str] = Field(None, max_length=2000)
 

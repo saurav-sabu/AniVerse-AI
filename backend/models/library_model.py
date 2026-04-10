@@ -10,6 +10,7 @@ class Watchlist(Base):
     tmdb_id = Column(String, nullable=False)
     title = Column(String, nullable=False)
     poster_path = Column(String)
+    genres = Column(String, nullable=True) # Comma-separated or JSON string for N+1 optimization (DEF-016)
     added_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (UniqueConstraint('user_id', 'tmdb_id', name='_user_watchlist_uc'),)
@@ -22,6 +23,7 @@ class History(Base):
     tmdb_id = Column(String, nullable=False)
     title = Column(String, nullable=False)
     poster_path = Column(String)
+    genres = Column(String, nullable=True)
     rating = Column(Integer, nullable=True)
     notes = Column(String, nullable=True)
     viewed_at = Column(DateTime(timezone=True), server_default=func.now())

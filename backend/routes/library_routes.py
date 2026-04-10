@@ -32,7 +32,8 @@ def add_to_watchlist(request: Request, movie: LibraryCreate, current_user: User 
             user_id=current_user.id,
             tmdb_id=movie.tmdb_id,
             title=movie.title,
-            poster_path=movie.poster_path
+            poster_path=movie.poster_path,
+            genres=movie.genres
         )
         db.add(new_entry)
         db.commit()
@@ -99,6 +100,7 @@ def add_to_history(request: Request, movie: LibraryCreate, current_user: User = 
             tmdb_id=movie.tmdb_id,
             title=movie.title,
             poster_path=movie.poster_path,
+            genres=movie.genres,
             rating=movie.rating,
             notes=movie.notes
         )
@@ -163,6 +165,7 @@ from backend.utils.persona_engine import calculate_persona
 @limiter.limit("5/minute")
 def get_user_persona(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return calculate_persona(db, current_user.id)
+
 @router.get("/radar")
 @limiter.limit("10/minute")
 def get_radar_data(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -203,10 +206,10 @@ def get_radar_data(request: Request, db: Session = Depends(get_db), current_user
 
 @router.get("/swipe")
 @limiter.limit("5/minute")
-def get_swipe_deck(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_swipe_deck(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
 
-    import requests
     import os
+    import httpx
     
     # 1. Get user library IDs
     watchlist = db.query(Watchlist).filter(Watchlist.user_id == current_user.id).all()
@@ -221,19 +224,20 @@ def get_swipe_deck(request: Request, current_user: User = Depends(get_current_us
     try:
         max_pages = 3
         trending = []
-        for page in range(1, max_pages + 1):
-            temp_params = params.copy()
-            temp_params["page"] = page
-            response = requests.get(endpoint, params=temp_params, timeout=5)
-            response.raise_for_status()
-            results = response.json().get("results", [])
-            trending.extend(results)
-            
-            # Count how many we'd have after filtering
-            potential_deck = [m for m in trending if str(m.get("id")) not in user_movie_ids]
-            if len(potential_deck) >= 15:
-                break
+        async with httpx.AsyncClient() as client:
+            for page in range(1, max_pages + 1):
+                temp_params = params.copy()
+                temp_params["page"] = page
+                response = await client.get(endpoint, params=temp_params, timeout=5)
+                response.raise_for_status()
+                results = response.json().get("results", [])
+                trending.extend(results)
                 
+                # Count how many we'd have after filtering
+                potential_deck = [m for m in trending if str(m.get("id")) not in user_movie_ids]
+                if len(potential_deck) >= 15:
+                    break
+            
     except Exception as e:
         logger.error(f"Failed to fetch trending movies from TMDB: {e}")
         trending = [] # Fallback

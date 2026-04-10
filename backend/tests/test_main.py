@@ -22,7 +22,7 @@ def test_auth_register_duplicate(db_session=None):
     client.post("/auth/register", json=payload)
     # Second attempt should definitely return 400
     response = client.post("/auth/register", json=payload)
-    assert response.status_code in [200, 400] 
+    assert response.status_code == 400
 
 def test_recommendation_unauthorized():
     """Test that recommendations require authentication."""

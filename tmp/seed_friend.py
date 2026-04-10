@@ -12,13 +12,14 @@ audit = db.query(User).filter(User.email == "audit_user@example.com").first()
 test = db.query(User).filter(User.email == "test@example.com").first()
 
 if audit and test:
-    # Check if exists
-    f = db.query(Friendship).filter(Friendship.user_id == audit.id, Friendship.friend_id == test.id).first()
+    # Check if exists (respecting the user_id < friend_id check constraint)
+    u_id, f_id = sorted([audit.id, test.id])
+    f = db.query(Friendship).filter(Friendship.user_id == u_id, Friendship.friend_id == f_id).first()
     if not f:
-        f = Friendship(user_id=audit.id, friend_id=test.id, status="ACCEPTED")
+        f = Friendship(user_id=u_id, friend_id=f_id, sender_id=audit.id, status="ACCEPTED")
         db.add(f)
         db.commit()
-        print(f"Created friendship between {audit.id} and {test.id}")
+        print(f"Created friendship between {u_id} and {f_id}")
     else:
         f.status = "ACCEPTED"
         db.commit()

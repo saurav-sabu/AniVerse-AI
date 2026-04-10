@@ -44,13 +44,6 @@ export const TrailerModal = ({ movie, trailerKey, onClose }: TrailerModalProps) 
             </div>
             <h2 className="text-xl font-black tracking-tight text-white uppercase">{movie.title} - Trailer</h2>
           </div>
-          <button 
-            onClick={onClose}
-            aria-label="Close trailer header"
-            className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
-          >
-            <X className="w-6 h-6" />
-          </button>
         </div>
         
         <iframe

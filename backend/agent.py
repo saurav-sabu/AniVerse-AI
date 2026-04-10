@@ -1,4 +1,5 @@
 import os
+import time
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_groq import ChatGroq
 from langgraph.prebuilt import create_react_agent
@@ -120,7 +121,7 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
             error_str = str(e).lower()
             # If it's a rate limit error (429) or a server error (500+), retry
             if ("rate limit" in error_str or "429" in error_str or "500" in error_str or "503" in error_str) and attempt < max_attempts - 1:
-                import time
+
                 logger.warning(f"AI Agent rate limit or server error (attempt {attempt + 1}): {e}. Retrying in {attempt_delay}s...")
                 time.sleep(attempt_delay)
                 attempt_delay *= 2

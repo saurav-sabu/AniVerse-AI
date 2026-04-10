@@ -127,7 +127,7 @@ export default function CineSwipePage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, deck]);
+  }, [currentIndex, deck, router]);
 
   const handleSwipe = async (direction: 'left' | 'right') => {
     if (!deck || deck.length === 0 || currentIndex >= deck.length) return;

@@ -1,6 +1,5 @@
 from sqlalchemy import text
 from backend.database import SessionLocal
-import os
 
 def run_migration():
     print("Starting robust database migration...")
@@ -51,6 +50,26 @@ def run_migration():
                 print("  - CheckConstraint already exists.")
             else:
                 print(f"  - Error adding CheckConstraint: {e}")
+
+        # 4. Add genres column to watchlist
+        print("Step 4: Adding genres column to watchlist...")
+        try:
+            db.execute(text("ALTER TABLE watchlist ADD COLUMN IF NOT EXISTS genres VARCHAR;"))
+            db.commit()
+            print("  - genres column added to watchlist.")
+        except Exception as e:
+            db.rollback()
+            print(f"  - Error adding genres to watchlist: {e}")
+
+        # 5. Add genres column to history
+        print("Step 5: Adding genres column to history...")
+        try:
+            db.execute(text("ALTER TABLE history ADD COLUMN IF NOT EXISTS genres VARCHAR;"))
+            db.commit()
+            print("  - genres column added to history.")
+        except Exception as e:
+            db.rollback()
+            print(f"  - Error adding genres to history: {e}")
 
         print("All migration steps processed.")
     except Exception as e:

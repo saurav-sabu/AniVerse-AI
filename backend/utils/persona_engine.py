@@ -44,9 +44,17 @@ def calculate_persona(db: Session, user_id: int):
     movie_ids = list(set([m.tmdb_id for m in all_movies]))
     
     genre_tally = Counter()
-    for mid in movie_ids:
+    for m in all_movies:
         try:
-            m_id = int(mid)
+            # Try to use local genre data first (DEF-016)
+            if hasattr(m, 'genres') and m.genres:
+                names = [g.strip() for g in m.genres.split(',') if g.strip()]
+                for name in names:
+                    genre_tally[name] += 1
+                continue
+            
+            # Fallback to TMDB API with cache
+            m_id = int(m.tmdb_id)
             details = get_cached_movie_details(m_id)
             if "genres" in details:
                 for g in details["genres"]:

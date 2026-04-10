@@ -90,7 +90,7 @@ export const OnboardingTour = ({ onComplete }: { onComplete: () => void }) => {
       window.removeEventListener('resize', updateCoords);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [currentStep]);
+  }, [currentStep, onComplete]);
 
 
   const updateCoords = () => {

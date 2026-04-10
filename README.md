@@ -57,7 +57,7 @@ A premium sidebar management system for your watchlist. Quickly access trailer p
 
 ### **1. Clone & Environment**
 ```bash
-git clone https://github.com/yourusername/AniVerse-AI.git
+git clone https://github.com/saurav-sabu/AniVerse-AI.git
 cd AniVerse-AI
 ```
 Create a `.env` file in the root directory:
@@ -65,6 +65,8 @@ Create a `.env` file in the root directory:
 GROQ_API_KEY="your_groq_key"
 TMDB_API_KEY="your_tmdb_key"
 DATABASE_URL="your_postgres_connection_string"
+SECRET_KEY="your_secret_key"
+ALLOWED_ORIGINS="http://localhost:3000"
 ```
 
 ### **2. Backend Setup**

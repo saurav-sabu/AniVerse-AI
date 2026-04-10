@@ -14,3 +14,9 @@ anienv/
 experiments/
 chroma_db/
 logs/
+
+node_modules/
+.next/
+*.log
+.env.local
+.env.*.local

@@ -11,7 +11,7 @@ import {
     getWatchlist, removeFromWatchlist, addToHistory, getHistory, updateHistoryEntry, getJournalSummary, 
     getTMDBImageUrl, searchUsers, sendFriendRequest, getPendingRequests, acceptFriendRequest, rejectFriendRequest, 
     getFriendList, getFriendLibrary, removeFriend, exportWatchlist, 
-    UserPublic, FriendshipRequest, FriendProfile 
+    UserPublic, FriendshipRequest, FriendProfile, FriendLibraryData
 } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { type MovieMetadata } from './MovieCard';
@@ -37,7 +37,7 @@ interface CineHubDrawerProps {
 
 export const CineHubDrawer = ({ isOpen, onClose, initialTab = 'vault', onPlayTrailer }: CineHubDrawerProps) => {
     const [activeTab, setActiveTab] = useState<HubTab>(initialTab);
-    const [selectedSocialFriend, setSelectedSocialFriend] = useState<FriendProfile | null>(null);
+    const [selectedSocialFriend, setSelectedSocialFriend] = useState<FriendLibraryData | null>(null);
     const [socialError, setSocialError] = useState<string | null>(null);
 
     // Tab state management
@@ -265,7 +265,12 @@ function VaultTab({ onPlayTrailer }: { onPlayTrailer: (movie: MovieMetadata) => 
                             
                             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
                                 <button 
-                                    onClick={() => onPlayTrailer({ id: movie.tmdb_id, title: movie.title })}
+                                    onClick={() => onPlayTrailer({ 
+                                        id: movie.tmdb_id, 
+                                        title: movie.title,
+                                        poster: movie.poster_path || '',
+                                        backdrop: ''
+                                    })}
                                     className="p-3 rounded-full bg-brand-pink text-white shadow-xl hover:scale-110 transition-transform"
                                 >
                                     <Play className="w-4 h-4 fill-current" />
@@ -398,8 +403,8 @@ function SocialTab({
     socialError,
     setSocialError
 }: { 
-    selectedFriend: FriendProfile | null, 
-    setSelectedFriend: (f: FriendProfile | null) => void,
+    selectedFriend: FriendLibraryData | null, 
+    setSelectedFriend: (f: FriendLibraryData | null) => void,
     socialError: string | null,
     setSocialError: (err: string | null) => void
 }) {
@@ -588,7 +593,7 @@ function SocialTab({
     );
 }
 
-const FriendProfileView = ({ data, onBack }: { data: FriendProfile, onBack: () => void }) => {
+const FriendProfileView = ({ data, onBack }: { data: FriendLibraryData, onBack: () => void }) => {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500 h-full overflow-y-auto no-scrollbar pb-10">
             <div className="flex flex-col items-center text-center space-y-4 p-8 rounded-[2.5rem] bg-white/5 border border-white/10 relative overflow-hidden shadow-2xl">
