@@ -46,7 +46,7 @@ def calculate_persona(db: Session, user_id: int):
     genre_tally = Counter()
     for m in all_movies:
         try:
-            # Try to use local genre data first (DEF-016)
+            # Try to use local genre data first
             if hasattr(m, 'genres') and m.genres:
                 names = [g.strip() for g in m.genres.split(',') if g.strip()]
                 for name in names:

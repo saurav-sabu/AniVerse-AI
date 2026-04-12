@@ -12,7 +12,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/search", response_model=List[UserPublic])
 @limiter.limit("20/minute")
 def search_users(request: Request, q: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    # Exclude users who are already friends or have a pending/rejected request (Defect 14)
+    # Exclude users who are already friends or have a pending/rejected request
     from backend.models.friendship_model import Friendship
     
     # Simple, direct query to get all related IDs
@@ -22,7 +22,7 @@ def search_users(request: Request, q: str, db: Session = Depends(get_db), curren
     related_ids = set([r[0] for r in id_list_1] + [r[0] for r in id_list_2])
     related_ids.add(current_user.id) # Safety check: exclude self again
     
-    # Escape wildcards for security (DEF-041)
+    # Escape wildcards for security
     safe_q = q.replace("%", "\\%").replace("_", "\\_")
     users_query = db.query(User).filter(User.email.ilike(f"%{safe_q}%"))
     if related_ids:

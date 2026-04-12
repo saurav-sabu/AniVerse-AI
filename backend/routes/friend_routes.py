@@ -45,7 +45,7 @@ def send_friend_request(request: Request, friend_id: int, db: Session = Depends(
             db.commit()
             return existing
         
-        # Defect 15: Symmetric Auto-Accept logic
+        # Symmetric Auto-Accept logic
         # If the other person already sent a request, and I'm sending one now -> Mutual interest, auto-accept
         if existing.status == "PENDING" and existing.sender_id != current_user.id:
             existing.status = "ACCEPTED"
@@ -89,7 +89,7 @@ def get_pending_requests(request: Request, db: Session = Depends(get_db), curren
     if not requests:
         return []
 
-    # Batch query users to avoid N+1 (Defect 4 & 5)
+    # Batch query users to avoid N+1
     sender_ids = [r.sender_id for r in requests]
     senders = db.query(User).filter(User.id.in_(sender_ids)).all()
     user_map = {u.id: u.email for u in senders}
@@ -139,7 +139,7 @@ def accept_friend_request(request: Request, request_id: int, db: Session = Depen
 @limiter.limit("10/minute")
 def reject_friend_request(request: Request, request_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
-    Reject a friend request (Defect 2).
+    Reject a friend request.
     """
     friend_req = db.query(Friendship).filter(
         Friendship.id == request_id,
@@ -164,7 +164,7 @@ def reject_friend_request(request: Request, request_id: int, db: Session = Depen
 @limiter.limit("20/minute")
 def list_friends(request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
-    List all accepted friends (Defect 4).
+    List all accepted friends.
     """
     friendships = db.query(Friendship).filter(
         ((Friendship.user_id == current_user.id) | (Friendship.friend_id == current_user.id)),
@@ -195,7 +195,7 @@ def list_friends(request: Request, db: Session = Depends(get_db), current_user: 
 @limiter.limit("10/minute")
 def remove_friend(request: Request, friend_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
-    Unfriend an accepted friend (Defect 7).
+    Unfriend an accepted friend.
     """
     friendship = db.query(Friendship).filter(
         (((Friendship.user_id == current_user.id) & (Friendship.friend_id == friend_id)) |
@@ -231,7 +231,7 @@ def get_friend_library(request: Request, friend_id: int, db: Session = Depends(g
     if not friendship:
         raise HTTPException(status_code=403, detail="You can only view the library of accepted friends")
 
-    # Fetch User Profile (Defect 1)
+    # Fetch User Profile
     friend_user = db.query(User).filter(User.id == friend_id).first()
     if not friend_user:
         raise HTTPException(status_code=404, detail="User not found")

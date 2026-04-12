@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Download, Share2, X, Sparkles, Film, Star } from 'lucide-react';
 import * as htmlToImage from 'html-to-image';
 import { cn } from '@/lib/utils';

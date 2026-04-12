@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronRight, ChevronLeft, Sparkles, Zap, Info } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -74,6 +74,37 @@ export const OnboardingTour = ({ onComplete }: { onComplete: () => void }) => {
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const [mounted, setMounted] = useState(false);
 
+  const updateCoords = useCallback(() => {
+    const target = document.getElementById(TOUR_STEPS[currentStep].targetId);
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      setCoords({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height
+      });
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      // Fallback for center
+      setCoords({ top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 });
+    }
+  }, [currentStep]);
+
+  const handleNext = useCallback(() => {
+    if (currentStep < TOUR_STEPS.length - 1) {
+      setCurrentStep(prev => prev + 1);
+    } else {
+      onComplete();
+    }
+  }, [currentStep, onComplete]);
+
+  const handlePrev = useCallback(() => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  }, [currentStep]);
+
   useEffect(() => {
     setMounted(true);
     updateCoords();
@@ -90,39 +121,10 @@ export const OnboardingTour = ({ onComplete }: { onComplete: () => void }) => {
       window.removeEventListener('resize', updateCoords);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [currentStep, onComplete]);
+  }, [currentStep, onComplete, updateCoords, handleNext, handlePrev]);
 
 
-  const updateCoords = () => {
-    const target = document.getElementById(TOUR_STEPS[currentStep].targetId);
-    if (target) {
-      const rect = target.getBoundingClientRect();
-      setCoords({
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height
-      });
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    } else {
-      // Fallback for center
-      setCoords({ top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 });
-    }
-  };
 
-  const handleNext = () => {
-    if (currentStep < TOUR_STEPS.length - 1) {
-      setCurrentStep(prev => prev + 1);
-    } else {
-      onComplete();
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentStep > 0) {
-      setCurrentStep(prev => prev - 1);
-    }
-  };
 
   if (!mounted) return null;
 

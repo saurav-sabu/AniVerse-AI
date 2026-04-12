@@ -83,8 +83,6 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
     
     access_token = create_access_token(data={"sub": db_user.email})
     
-    # Unified secure flag logic (DEF-004)
-    
     content = {"access_token": access_token, "token_type": "bearer"}
 
     response = JSONResponse(content=content)
@@ -103,14 +101,14 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
 @router.post("/logout")
 def logout(request: Request, response: Response):
     """
-    Clears the access_token HttpOnly cookie (DEF-044).
+    Clears the access_token HttpOnly cookie.
     """
     response.delete_cookie(
         key="access_token",
         httponly=True,
         samesite="lax",
         secure=_is_secure_cookie(request),
-        path="/" # Ensure full session clearance (DEF-057)
+        path="/" # Ensure full session clearance
     )
     return {"message": "Successfully logged out"}
 
@@ -120,7 +118,7 @@ def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session =
     
     user = db.query(User).filter(User.email == body.email).first()
     if not user:
-        # Avoid user enumeration by returning identical message (DEF-045)
+        # Avoid user enumeration by returning identical message
         return {"message": "If this email is registered, a reset link will be sent shortly."}
     
     # Mock sending email

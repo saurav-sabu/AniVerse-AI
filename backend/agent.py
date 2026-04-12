@@ -29,8 +29,10 @@ def initialize_agent():
             logger.error("GROQ_API_KEY not found in environment")
             raise ValueError("GROQ_API_KEY is required for the CineSync AI agent.")
         
+        # Make model name configurable (new feature/fix)
+        model_name = os.getenv("GROQ_MODEL", "qwen/qwen3-32b")
         llm = ChatGroq(
-            model="qwen/qwen3-32b",
+            model=model_name,
             api_key=api_key,
             temperature=0.3
         )
@@ -48,7 +50,7 @@ def initialize_agent():
         
         # create_react_agent uses 'prompt' in this version
         agent = create_react_agent(llm, tools, prompt=system_prompt)
-        logger.info("CineSync AI Agent initialized successfully.")
+        logger.info(f"CineSync AI Agent initialized successfully with model: {model_name}")
         return agent
         
     except Exception as e:
@@ -88,7 +90,7 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
     
     for attempt in range(max_attempts):
         try:
-            # Prune history to avoid context window overflow (DEF-062)
+            # Prune history to avoid context window overflow
             # We keep the last 10 messages to protect the token budget
             if history and len(history) > 10:
                 history = history[-10:]
@@ -107,7 +109,7 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
             
             result = agent.invoke(inputs, config=config)
             
-            # Extract AI message robustly using type checking (DEF-055)
+            # Extract AI message robustly using type checking
             # This is more resilient than string class name checks
             ai_messages = [m for m in result["messages"] if isinstance(m, AIMessage)]
             if ai_messages:
@@ -129,7 +131,7 @@ def get_movie_recommendation(user_query: str, history: list = None, user_context
                 
             logger.error(f"Error during agent invocation after {attempt + 1} attempts: {e}")
             
-            # DEF: Poetic Fallback for rate limits
+            # Poetic Fallback for rate limits
             if "rate limit" in error_str or "429" in error_str:
                 return "✨ **Vibe Match Fallback**: I'm experiencing high celestial traffic right now, but based on your vibe, I highly recommend checking out some timeless classics like *Inception* or *Blade Runner 2049* while my circuits cool down! Please try again in a minute."
                 

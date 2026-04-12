@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchWithError, getTMDBImageUrl } from '@/lib/api';
 import { X, ZoomIn, ZoomOut } from 'lucide-react';
@@ -31,7 +31,7 @@ export default function VibeRadar({
   useEffect(() => {
     const loadRadar = async () => {
       try {
-        const data = await fetchWithError('/library/radar');
+        const data = await fetchWithError('/library/radar') as { nodes: RadarNode[] };
         setNodes(data.nodes);
       } catch (err) {
         console.error('Failed to load radar data', err);
@@ -42,7 +42,7 @@ export default function VibeRadar({
     loadRadar();
   }, []);
 
-  const handleDrag = (event: any, info: any) => {
+  const handleDrag = (_: unknown, info: { delta: { x: number, y: number } }) => {
     setViewState(prev => ({
       ...prev,
       x: prev.x + info.delta.x,

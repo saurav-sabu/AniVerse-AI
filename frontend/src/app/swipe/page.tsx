@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { fetchWithError, addToWatchlist, addToHistory, getTMDBImageUrl, isLoggedIn } from '@/lib/api';
+import { fetchWithError, addToWatchlist, getTMDBImageUrl, isLoggedIn } from '@/lib/api';
 import { X, Heart, ArrowLeft, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -31,7 +31,7 @@ const MovieCard = ({
   const colorLike = useTransform(x, [50, 150], ['rgba(236, 72, 153, 0)', 'rgba(236, 72, 153, 0.5)']);
   const colorSkip = useTransform(x, [-150, -50], ['rgba(239, 68, 68, 0.5)', 'rgba(239, 68, 68, 0)']);
 
-  const handleDragEnd = (event: any, info: any) => {
+  const handleDragEnd = (_: unknown, info: { offset: { x: number } }) => {
     if (info.offset.x > 100) onSwipe('right');
     else if (info.offset.x < -100) onSwipe('left');
   };
@@ -106,11 +106,11 @@ export default function CineSwipePage() {
 
     const loadDeck = async () => {
       try {
-        const data = await fetchWithError('/library/swipe');
+        const data = await fetchWithError('/library/swipe') as { deck: SwipeMovie[] };
         setDeck(data.deck || []);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to load swipe deck', err);
-        setError(err.message || 'Failed to initialize movie deck.');
+        setError(err instanceof Error ? err.message : 'Failed to initialize movie deck.');
       } finally {
         setLoading(false);
       }
@@ -118,18 +118,7 @@ export default function CineSwipePage() {
     loadDeck();
   }, [router]);
 
-  // Handle Keydown
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') handleSwipe('left');
-      if (e.key === 'ArrowRight') handleSwipe('right');
-      if (e.key === 'Escape') router.push('/');
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, deck, router]);
-
-  const handleSwipe = async (direction: 'left' | 'right') => {
+  const handleSwipe = useCallback(async (direction: 'left' | 'right') => {
     if (!deck || deck.length === 0 || currentIndex >= deck.length) return;
     const movie = deck[currentIndex];
     
@@ -142,7 +131,20 @@ export default function CineSwipePage() {
     }
 
     setCurrentIndex(prev => prev + 1);
-  };
+  }, [currentIndex, deck]);
+
+  // Handle Keydown
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') handleSwipe('left');
+      if (e.key === 'ArrowRight') handleSwipe('right');
+      if (e.key === 'Escape') router.push('/');
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, deck, router, handleSwipe]);
+
+
 
   if (!hasMounted || loading) {
     return (
@@ -205,7 +207,7 @@ export default function CineSwipePage() {
                 <Sparkles size={48} className="text-brand-pink" />
               </div>
               <h2 className="text-2xl font-black text-white uppercase mb-2">Deck Empty!</h2>
-              <p className="text-white/40 max-w-xs mb-8">You've seen everything we have for now. Come back later for fresh picks!</p>
+              <p className="text-white/40 max-w-xs mb-8">You&apos;ve seen everything we have for now. Come back later for fresh picks!</p>
               <Link href="/" className="px-8 py-4 bg-gradient-brand rounded-2xl font-black text-white uppercase tracking-widest hover:scale-105 transition-transform shadow-xl shadow-brand-pink/20">
                 Back to CineSync
               </Link>

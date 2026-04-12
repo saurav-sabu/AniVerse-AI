@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Check, Plus, Book, Share2, Sparkles, Eye, Star, Archive } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Play, Check, Plus, Book } from 'lucide-react';
 import Image from 'next/image';
 import { getTMDBImageUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';

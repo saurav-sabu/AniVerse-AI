@@ -33,8 +33,8 @@ export default function LoginPage() {
         try {
             await loginUser(email, password);
             router.push('/');
-        } catch (err: any) {
-            setError(err.message || 'Login failed. Please check your credentials.');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Login failed. Please check your credentials.');
         } finally {
             setIsLoading(false);
         }
@@ -120,7 +120,7 @@ export default function LoginPage() {
                 </form>
 
                 <div className="mt-10 text-center text-white/50 text-sm">
-                    Don't have an account? {' '}
+                    Don&apos;t have an account? {` `}
                     <Link href="/register" className="text-brand-purple font-bold hover:text-brand-magenta transition-colors">
                         Register for Free
                     </Link>

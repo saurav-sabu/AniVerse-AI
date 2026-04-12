@@ -89,7 +89,7 @@ def add_to_history(request: Request, movie: LibraryCreate, current_user: User = 
     
     if existing:
         existing.viewed_at = func.now()
-        # Only update rating/notes if explicitly provided to avoid overwriting (DEF-043)
+        # Only update rating/notes if explicitly provided to avoid overwriting
         if movie.rating is not None:
             existing.rating = movie.rating
         if movie.notes is not None:
@@ -114,7 +114,7 @@ def add_to_history(request: Request, movie: LibraryCreate, current_user: User = 
         return new_entry
     except Exception as e:
         db.rollback()
-        # Handle race condition/duplicate in history (DEF-058)
+        # Handle race condition/duplicate in history
         existing = db.query(History).filter(
             History.user_id == current_user.id,
             History.tmdb_id == movie.tmdb_id
@@ -188,7 +188,7 @@ def get_radar_data(request: Request, db: Session = Depends(get_db), current_user
     
     nodes = []
     for m in all_movies:
-        # Deterministic position based on tmdb_id (Defect 20)
+        # Deterministic position based on tmdb_id
         seed = int(hashlib.md5(str(m.tmdb_id).encode()).hexdigest(), 16) % (10**9)
         rng = random.Random(seed)
         angle_deg = rng.randint(0, 360)
@@ -215,7 +215,7 @@ async def get_swipe_deck(request: Request, current_user: User = Depends(get_curr
     history = db.query(History).filter(History.user_id == current_user.id).all()
     user_movie_ids = {m.tmdb_id for m in watchlist + history}
     
-    # 2. Fetch trending movies with error handling (Defect 4)
+    # 2. Fetch trending movies with error handling
     TMDB_API_KEY = os.getenv("TMDB_API_KEY")
     endpoint = f"https://api.themoviedb.org/3/trending/movie/week"
     params = {"api_key": TMDB_API_KEY, "language": "en-US"}

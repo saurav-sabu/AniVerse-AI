@@ -68,7 +68,7 @@ export function getTMDBImageUrl(path: string | null, size: 'w500' | 'original' =
     return `https://image.tmdb.org/t/p/${size}${formattedPath}`;
 }
 
-export async function fetchWithError(endpoint: string, options: RequestInit = {}): Promise<any> {
+export async function fetchWithError<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...(options.headers as Record<string, string>),
@@ -77,7 +77,7 @@ export async function fetchWithError(endpoint: string, options: RequestInit = {}
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers,
-        credentials: 'include', // Defect 6: Send HttpOnly cookies automatically
+        credentials: 'include', // Send HttpOnly cookies automatically
     });
 
     if (response.status === 401) {
@@ -88,15 +88,15 @@ export async function fetchWithError(endpoint: string, options: RequestInit = {}
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
         const errorMessage = Array.isArray(error.detail) 
-            ? error.detail.map((e: any) => e.msg).join('; ') 
+            ? error.detail.map((e: { msg: string }) => e.msg).join('; ') 
             : error.detail;
         throw new Error(errorMessage || 'Request failed');
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
 }
 
-// Auth State Helper (Defect 6: Use local storage only as a UI marker, not for the token)
+// Auth State Helper (Use local storage only as a UI marker, not for the token)
 export const getAuthToken = () => {
     return null; // Token is now in HttpOnly cookie, inaccessible to JS
 }
@@ -117,7 +117,7 @@ export const logout = async () => {
         sessionStorage.clear();
         
         try {
-            // Defect 44: Call backend to clear HttpOnly cookie
+            // Call backend to clear HttpOnly cookie
             await fetch(`${API_BASE_URL}/auth/logout`, { 
                 method: 'POST', 
                 credentials: 'include' 
@@ -193,7 +193,7 @@ export async function getRecommendation(prompt: string, history: Message[] = [],
 }
 
 export async function getSurpriseRecommendation(signal?: AbortSignal): Promise<string> {
-    const data = await fetchWithError('/recommend/surprise', { signal });
+    const data = await fetchWithError<RecommendResponse>('/recommend/surprise', { signal });
     return data.response;
 }
 export async function addToWatchlist(tmdb_id: string, title: string, poster_path: string): Promise<void> {
@@ -232,12 +232,12 @@ export async function updateHistoryEntry(tmdb_id: string, rating?: number, notes
 }
 
 export async function getJournalSummary(): Promise<string> {
-    const data = await fetchWithError('/library/journal/summary');
+    const data = await fetchWithError<{ summary: string }>('/library/journal/summary');
     return data.summary;
 }
 
 export async function getMovieTrailer(tmdb_id: string): Promise<string> {
-    const data = await fetchWithError(`/movies/trailer/${tmdb_id}`);
+    const data = await fetchWithError<{ key: string }>(`/movies/trailer/${tmdb_id}`);
     return data.key;
 }
 

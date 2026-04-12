@@ -38,7 +38,7 @@ def add_to_journal(title: str, tmdb_id: str, poster_path: str, rating: int = Non
         if existing_entry:
             existing_entry.rating = rating if rating is not None else existing_entry.rating
             existing_entry.notes = notes if notes is not None else existing_entry.notes
-            existing_entry.viewed_at = func.now() # Ensure re-watches are current (DEF-054)
+            existing_entry.viewed_at = func.now() # Ensure re-watches are current
             msg = f"Updated '{title}' in your cinematic journal."
         else:
             new_entry = History(

@@ -16,7 +16,7 @@ from slowapi import _rate_limit_exceeded_handler
 
 logger = get_logger(__name__)
 
-# Validate environment variables (P0.3: Skip if TESTING=true)
+# Validate environment variables
 REQUIRED_ENV_VARS = [
     "TMDB_API_KEY",
     "GROQ_API_KEY",
@@ -46,14 +46,14 @@ else:
 
 app = FastAPI(title="CineSync AI API")
 
-# Defect 2: Add SlowAPIMiddleware for rate limiting to work
+# Rate limiting setup
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # Enable CORS for Next.js frontend
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
-# Clean origins: handle both commas and spaces (DEF-049/051)
+# Clean origins: handle both commas and spaces
 allowed_origins = [origin.strip() for origin in allowed_origins_env.replace(",", " ").split() if origin.strip()]
 
 app.add_middleware(
@@ -64,7 +64,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Defect 11: Security Headers Middleware
+# Security Headers Middleware
 @app.middleware("http")
 async def add_security_headers(request, call_next):
     response = await call_next(request)
@@ -72,13 +72,13 @@ async def add_security_headers(request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     
-    # Environment-aware CSP (Defect 11 Recovery)
+    # Environment-aware CSP
     env = os.getenv("ENV", "development").lower()
     script_src = "'self' 'unsafe-inline' https://cdn.jsdelivr.net"
     if env != "production":
         script_src += " 'unsafe-eval'"  # Required for some dev tools/HMR
         
-    # Crucial: Allow connections to the backend API explicitly (DEF-051 Fix)
+    # Allow connections to the backend API explicitly 
     origin_list = " ".join(allowed_origins)
     if env == "production":
         connect_sources = f"'self' {origin_list}"
@@ -104,7 +104,7 @@ app.include_router(movie_routes.router)
 app.include_router(user_routes.router)
 app.include_router(friend_routes.router)
 
-# Global Exception Handler (DEF-040)
+# Global Exception Handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Global exception caught: {exc}", exc_info=True)
@@ -116,7 +116,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.get("/health")
 async def health(db: Session = Depends(get_db)):
     """
-    Health check using the pool-managed get_db dependency (DEF-059).
+    Health check using the pool-managed get_db dependency.
     """
     try:
         db.execute(text("SELECT 1"))

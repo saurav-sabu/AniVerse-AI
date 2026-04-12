@@ -13,8 +13,9 @@ def generate_journal_summary(history_entries):
     if not api_key:
         return "Your cinematic mood is currently being decrypted. AI-powered insights require a valid GROQ_API_KEY. Please configure your environment."
 
+    model_name = os.getenv("GROQ_MODEL", "qwen/qwen3-32b")
     llm = ChatGroq(
-        model="qwen/qwen3-32b",
+        model=model_name,
         api_key=api_key,
         temperature=0.7
     )

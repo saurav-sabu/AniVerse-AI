@@ -2,6 +2,7 @@ import logging
 import json
 from logging.handlers import RotatingFileHandler
 import os
+from pathlib import Path
 from datetime import datetime
 
 class JSONFormatter(logging.Formatter):
@@ -19,13 +20,12 @@ class JSONFormatter(logging.Formatter):
 def get_logger(name: str):
     """
     Returns a configured logger instance.
-    - Production: JSON logging to stdout (Defect 14)
+    - Production: JSON logging to stdout
     - Development: Pretty-printed console and file logging
     """
     logger = logging.getLogger(name)
     
     if not logger.handlers:
-        # Configurable log level (Defect 14)
         level_name = os.getenv("LOG_LEVEL", "INFO").upper()
         level = getattr(logging, level_name, logging.INFO)
         logger.setLevel(level)
@@ -33,19 +33,22 @@ def get_logger(name: str):
         env = os.getenv("ENV", "development").lower()
         
         if env == "production":
-            # Production: JSON to stdout only (Defect 14)
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(JSONFormatter())
             logger.addHandler(console_handler)
         else:
-            # Development: Console + File logging
-            log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
-            if not os.path.exists(log_dir):
-                os.makedirs(log_dir)
+            # Robust root directory finding
+            current_file = Path(__file__).resolve()
+            # Climb up from /backend/utils/logger.py to root (3 levels)
+            project_root = current_file.parents[2] 
+            log_dir = project_root / "logs"
+            
+            if not log_dir.exists():
+                log_dir.mkdir(parents=True, exist_ok=True)
             
             log_filename = "cinesync.log"
             file_handler = RotatingFileHandler(
-                os.path.join(log_dir, log_filename),
+                log_dir / log_filename,
                 maxBytes=5*1024*1024, # 5MB
                 backupCount=3
             )

@@ -38,8 +38,8 @@ export default function RegisterPage() {
             await registerUser(email, password);
             setSuccess(true);
             setTimeout(() => router.push('/'), 2000);
-        } catch (err: any) {
-            setError(err.message || 'Registration failed. Try again.');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Registration failed. Try again.');
         } finally {
             setIsLoading(false);
         }

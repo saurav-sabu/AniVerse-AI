@@ -19,8 +19,8 @@ export default function ForgotPasswordPage() {
         try {
             const res = await forgotPassword(email);
             setMessage(res);
-        } catch (err: any) {
-            setError(err.message || "Failed to send reset link.");
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Failed to send reset link.");
         } finally {
             setIsLoading(false);
         }
@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
                     <Film className="w-12 h-12 text-brand-pink mb-4" />
                     <h1 className="text-3xl font-extrabold text-gradient">Reset Password</h1>
                     <p className="text-white/50 mt-2 text-center text-balance">
-                        Enter your email address and we'll send you a link to reset your password.
+                        Enter your email address and we&apos;ll send you a link to reset your password.
                     </p>
                 </div>
 

@@ -1,19 +1,18 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, 
-  Plus, Check, Mic, MicOff, Play, X, Archive, Share2, Radar, 
-  Dice5, Library, Users, Book, HelpCircle 
+  Mic, MicOff, X, Radar, 
+  Dice5, Library, HelpCircle, Share2
 } from 'lucide-react';
 import Link from 'next/link';
 import { 
   getRecommendation, Message, isLoggedIn, logout, addToWatchlist, 
   removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, 
-  getPersona, getTMDBImageUrl, getSurpriseRecommendation 
+  getPersona, getSurpriseRecommendation, LibraryItem, PersonaData
 } from '@/lib/api';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -39,7 +38,7 @@ export default function Home() {
   const [isRadarOpen, setIsRadarOpen] = useState(false);
   const [isPersonaCardOpen, setIsPersonaCardOpen] = useState(false);
   const [persona, setPersona] = useState<PersonaData | null>(null);
-  const [isTrailerLoading, setIsTrailerLoading] = useState(false);
+  const [, setIsTrailerLoading] = useState(false);
 
   const [themeColor, setThemeColor] = useState('#ec4899'); 
   const [isHubOpen, setIsHubOpen] = useState(false);
@@ -57,6 +56,26 @@ export default function Home() {
     };
   }, []);
 
+  // Auth & Data fetch helper
+  const fetchPersona = useCallback(async () => {
+    try {
+      const data = await getPersona();
+      setPersona(data);
+    } catch (e) {
+      console.error("Failed to fetch persona", e);
+    }
+  }, []);
+
+  const fetchWatchlist = useCallback(async () => {
+    try {
+      const data = await getWatchlist();
+      setWatchlist(data);
+      await fetchPersona(); // Refresh persona when watchlist changes
+    } catch (e) {
+      console.error("Failed to fetch watchlist", e);
+    }
+  }, [fetchPersona]);
+
   // Auth & Data fetch
   useEffect(() => {
     setHasMounted(true);
@@ -67,7 +86,7 @@ export default function Home() {
       setIsAuthenticated(true);
       fetchWatchlist();
       
-      // Check for tour with a slight delay for hydration (DEF-014)
+      // Check for tour with a slight delay for hydration
       setTimeout(() => {
         const tourCompleted = localStorage.getItem('cinesync_tour_completed');
         if (!tourCompleted) {
@@ -76,7 +95,7 @@ export default function Home() {
       }, 1000);
 
     }
-  }, [router]);
+  }, [router, fetchWatchlist]);
 
 
 
@@ -104,7 +123,6 @@ export default function Home() {
   }, []);
 
   // Combined auto-scroll logic
-  // Combined auto-scroll logic (DEF-063)
   useEffect(() => {
     const timer = requestAnimationFrame(() => {
       if (scrollRef.current) {
@@ -114,30 +132,13 @@ export default function Home() {
     return () => cancelAnimationFrame(timer);
   }, [messages, isLoading]);
 
-  async function fetchPersona() {
-    try {
-      const data = await getPersona();
-      setPersona(data);
-    } catch (e) {
-      console.error("Failed to fetch persona", e);
-    }
-  }
 
-  async function fetchWatchlist() {
-    try {
-      const data = await getWatchlist();
-      setWatchlist(data);
-      await fetchPersona(); // Refresh persona when watchlist changes
-    } catch (e) {
-      console.error("Failed to fetch watchlist", e);
-    }
-  }
 
-  const handleMarkWatched = async (movie: any) => {
+  const handleMarkWatched = async (movie: MovieMetadata) => {
     try {
-      const tmdb_id = String(movie.id || movie.tmdb_id);
+      const tmdb_id = String(movie.id);
       const title = movie.title;
-      const poster_path = movie.poster || movie.poster_path;
+      const poster_path = movie.poster;
 
       if (!tmdb_id || !title || !poster_path) {
         console.error("Missing required fields for journaling", { tmdb_id, title, poster_path });
@@ -148,11 +149,13 @@ export default function Home() {
       // Optional: remove from watchlist when marked as watched
       if (watchlist.some(m => String(m.tmdb_id) === tmdb_id)) {
         await removeFromWatchlist(tmdb_id);
-        setWatchlist(prev => prev.filter(m => String(m.tmdb_id) !== tmdb_id));
+        const data = await getWatchlist();
+        setWatchlist(data);
       }
       setHubTab('history');
       setIsHubOpen(true); // Open hub to show the new journal entry
-      await fetchPersona(); // Refresh persona
+      const personaData = await getPersona();
+      setPersona(personaData);
     } catch (e) {
       console.error("Mark watched failed", e);
     }
@@ -166,7 +169,7 @@ export default function Home() {
         setWatchlist(prev => prev.filter(m => m.tmdb_id !== movie.id));
       } else {
         await addToWatchlist(movie.id, movie.title, movie.poster);
-        setWatchlist(prev => [...prev, { tmdb_id: movie.id, title: movie.title, poster_path: movie.poster }]);
+        await fetchWatchlist();
       }
     } catch (e) {
       console.error("Watchlist toggle error", e);
@@ -175,7 +178,7 @@ export default function Home() {
 
   const handleSurpriseMe = async () => {
     if (isLoading) return;
-    // Abort existing request (DEF-046)
+    // Abort existing request
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
@@ -189,9 +192,9 @@ export default function Home() {
         content: response 
       };
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Surprise Me failed", err);
-      setError(err.message || "Failed to find a surprise for you.");
+      setError(err instanceof Error ? err.message : "Failed to find a surprise for you.");
     } finally {
       setIsLoading(false);
     }
@@ -201,7 +204,7 @@ export default function Home() {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    // Abort existing request (DEF-046)
+    // Abort existing request
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
@@ -230,13 +233,14 @@ export default function Home() {
         content: response 
       };
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (err: any) {
-      if (err.message === 'Session expired' || err.message === 'Unauthorized') {
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "";
+      if (errorMsg === 'Session expired' || errorMsg === 'Unauthorized') {
         setError("Your session has expired. Redirecting to login...");
         return;
       }
       
-      const errorMessage = err.message || "Oops! My film reels got tangled. Please try again.";
+      const errorMessage = errorMsg || "Oops! My film reels got tangled. Please try again.";
       setError(errorMessage);
       
       setMessages((prev) => [...prev, { 
@@ -271,18 +275,31 @@ export default function Home() {
   }, [messages]);
 
   // Voice Search Logic
+  interface SpeechRecognitionSubtype {
+    continuous: boolean;
+    interimResults: boolean;
+    onresult: (event: unknown) => void;
+    onerror: (event: unknown) => void;
+    onend: () => void;
+    start: () => void;
+    stop: () => void;
+    abort: () => void;
+  }
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionSubtype | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
+      type SpeechConstructor = new () => SpeechRecognitionSubtype;
+      const win = window as unknown as { webkitSpeechRecognition: SpeechConstructor; SpeechRecognition: SpeechConstructor };
+      const SpeechClass = win.webkitSpeechRecognition || win.SpeechRecognition;
+      recognitionRef.current = new SpeechClass();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
 
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
+      recognitionRef.current.onresult = (event: unknown) => {
+        const recognitionEvent = event as { results: { [key: number]: { [key: number]: { transcript: string } } } };
+        const transcript = recognitionEvent.results[0][0].transcript;
         setInput(transcript);
         setIsListening(false);
         // Auto-submit after voice input
@@ -292,8 +309,9 @@ export default function Home() {
         }, 800);
       };
 
-      recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error', event.error);
+      recognitionRef.current.onerror = (event: unknown) => {
+        const recognitionError = event as { error: string };
+        console.error('Speech recognition error', recognitionError.error);
         setIsListening(false);
       };
 
@@ -318,8 +336,8 @@ export default function Home() {
     }
   };
 
-  const handlePlayTrailer = async (movie: any) => {
-    const movieId = movie.id || movie.tmdb_id;
+  const handlePlayTrailer = async (movie: MovieMetadata | { id: string }) => {
+    const movieId = movie.id;
     if (!movieId) {
       console.error("Cannot play trailer: No movie ID provided", movie);
       return;
@@ -328,7 +346,9 @@ export default function Home() {
     try {
       const key = await getMovieTrailer(movieId);
       setTrailerKey(key);
-      setSelectedTrailer(movie);
+      if ('title' in movie) {
+        setSelectedTrailer(movie as MovieMetadata);
+      }
     } catch (e) {
       console.error("Failed to fetch trailer", e);
       // Removed alert for better UX. Could add a toast notification here in the future.
@@ -347,9 +367,6 @@ export default function Home() {
 
 
   const renderMessageContent = (content: string) => {
-    // Regex for metadata, including optional leading bullet point and whitespace
-    const metadataWithBulletRegex = /(?:\n\s*[-*]\s*)?\[METADATA: (\{[\s\S]*?\})\]/g;
-    const metadataRegex = /\[METADATA: (\{[\s\S]*?\})\]/g;
     // Enhanced regex to handle potentially nested JSON or multi-line blocks more safely
     const robustMetadataRegex = /\[METADATA: (\{[\s\S]*?\})(?=\s*\])\]/g;
     const movies: MovieMetadata[] = [];

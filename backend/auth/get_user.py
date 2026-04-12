@@ -15,7 +15,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
     if token and token.startswith("Bearer "):
         token = token.split(" ")[1]
     else:
-        # 2. Fallback to HttpOnly cookie (Defect 6)
+        # 2. Fallback to HttpOnly cookie
         token = request.cookies.get("access_token")
     
     credentials_exception = HTTPException(

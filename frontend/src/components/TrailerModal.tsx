@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Film, X } from 'lucide-react';
 import type { MovieMetadata } from './MovieCard';
 

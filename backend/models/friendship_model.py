@@ -16,7 +16,7 @@ class Friendship(Base):
     # Ensure we don't have duplicate friendship entries
     __table_args__ = (
         UniqueConstraint('user_id', 'friend_id', name='_user_friend_uc'),
-        # Defect 34: Ensure user_id < friend_id to prevent bidirectional duplicates
+        # Ensure user_id < friend_id to prevent bidirectional duplicates
         CheckConstraint('user_id < friend_id', name='_ordered_friendship_ck'),
     )
 
