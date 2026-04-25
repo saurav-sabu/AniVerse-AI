@@ -332,3 +332,67 @@ export async function removeFriend(friendId: number): Promise<{ message: string 
 export async function getFriendLibrary(friendId: number): Promise<FriendLibraryData> {
     return fetchWithError(`/friends/${friendId}/library`);
 }
+
+// --- Movie DB API ---
+
+export async function searchMedia(query: string, page: number = 1): Promise<any> {
+    return fetchWithError(`/movies/search?query=${encodeURIComponent(query)}&page=${page}`);
+}
+
+export async function getTrendingMovies(timeWindow: string = 'day'): Promise<any> {
+    return fetchWithError(`/movies/trending?time_window=${timeWindow}`);
+}
+
+export async function getTopRatedMovies(page: number = 1): Promise<any> {
+    return fetchWithError(`/movies/top_rated?page=${page}`);
+}
+
+export async function getMovieDetails(tmdbId: string | number): Promise<any> {
+    return fetchWithError(`/movies/details/${tmdbId}`);
+}
+
+export async function getMovieCredits(tmdbId: string | number): Promise<any> {
+    return fetchWithError(`/movies/credits/${tmdbId}`);
+}
+
+export async function getPersonDetails(personId: string | number): Promise<any> {
+    return fetchWithError(`/movies/person/${personId}`);
+}
+
+export async function getPersonCredits(personId: string | number): Promise<any> {
+    return fetchWithError(`/movies/person/${personId}/credits`);
+}
+
+// --- Reviews API ---
+
+export interface Review {
+    id: number;
+    user_id: number;
+    tmdb_id: string;
+    rating: number;
+    content: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export async function getReviews(tmdbId: string | number): Promise<Review[]> {
+    return fetchWithError(`/reviews/${tmdbId}`);
+}
+
+export async function createReview(tmdbId: string, rating: number, content: string): Promise<Review> {
+    return fetchWithError('/reviews/', {
+        method: 'POST',
+        body: JSON.stringify({ tmdb_id: tmdbId, rating, content }),
+    });
+}
+
+export async function updateReview(reviewId: number, rating?: number, content?: string): Promise<Review> {
+    return fetchWithError(`/reviews/${reviewId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ rating, content }),
+    });
+}
+
+export async function deleteReview(reviewId: number): Promise<{ message: string }> {
+    return fetchWithError(`/reviews/${reviewId}`, { method: 'DELETE' });
+}

@@ -1,5 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
-from backend.tools.tmdb_tool import get_movie_trailer
+from backend.tools.tmdb_tool import (
+    get_movie_trailer, get_movie_details, get_movie_credits,
+    get_person_details, get_person_movie_credits,
+    get_top_rated_movies, get_trending_movies, search_multi_media
+)
 from backend.auth.get_user import get_current_user
 from backend.models.user_model import User
 from backend.utils.logger import get_logger
@@ -29,3 +33,80 @@ def fetch_trailer(request: Request, tmdb_id: str, current_user: User = Depends(g
     except Exception as e:
         logger.error(f"Trailer fetch error: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch trailer information from external source.")
+
+@router.get("/trending")
+@limiter.limit("30/minute")
+def fetch_trending_movies(request: Request, time_window: str = "day"):
+    try:
+        data = get_trending_movies(time_window=time_window)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/top_rated")
+@limiter.limit("30/minute")
+def fetch_top_rated_movies(request: Request, page: int = 1):
+    try:
+        data = get_top_rated_movies(page=page)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/details/{tmdb_id}")
+@limiter.limit("30/minute")
+def fetch_movie_details(request: Request, tmdb_id: int):
+    try:
+        data = get_movie_details(movie_id=tmdb_id)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/credits/{tmdb_id}")
+@limiter.limit("30/minute")
+def fetch_movie_credits(request: Request, tmdb_id: int):
+    try:
+        data = get_movie_credits(movie_id=tmdb_id)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/person/{person_id}")
+@limiter.limit("30/minute")
+def fetch_person_details(request: Request, person_id: int):
+    try:
+        data = get_person_details(person_id=person_id)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/person/{person_id}/credits")
+@limiter.limit("30/minute")
+def fetch_person_credits(request: Request, person_id: int):
+    try:
+        data = get_person_movie_credits(person_id=person_id)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/search")
+@limiter.limit("60/minute")
+def search_media(request: Request, query: str, page: int = 1):
+    try:
+        data = search_multi_media(query=query, page=page)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

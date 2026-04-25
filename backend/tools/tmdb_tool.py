@@ -396,3 +396,106 @@ def get_movie_details(movie_id: int) -> dict:
     except requests.exceptions.RequestException as e:
         logger.error(f"TMDB Details API failed: {e}")
         return {"error": str(e)}
+
+@retry_on_error()
+def get_movie_credits(movie_id: int) -> dict:
+    """Get cast and crew for a movie."""
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key missing."}
+    
+    endpoint = f"{BASE_URL}/movie/{movie_id}/credits"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US"}
+    try:
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"TMDB Credits API failed: {e}")
+        return {"error": str(e)}
+
+@retry_on_error()
+def get_person_details(person_id: int) -> dict:
+    """Get details of a person."""
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key missing."}
+        
+    endpoint = f"{BASE_URL}/person/{person_id}"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US"}
+    try:
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"TMDB Person API failed: {e}")
+        return {"error": str(e)}
+
+@retry_on_error()
+def get_person_movie_credits(person_id: int) -> dict:
+    """Get movie credits of a person."""
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key missing."}
+        
+    endpoint = f"{BASE_URL}/person/{person_id}/movie_credits"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US"}
+    try:
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"TMDB Person Credits API failed: {e}")
+        return {"error": str(e)}
+
+@retry_on_error()
+def get_top_rated_movies(page: int = 1) -> dict:
+    """Get top rated movies."""
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key missing."}
+        
+    endpoint = f"{BASE_URL}/movie/top_rated"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US", "page": page}
+    try:
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"TMDB Top Rated API failed: {e}")
+        return {"error": str(e)}
+
+@retry_on_error()
+def get_trending_movies(time_window: str = "day") -> dict:
+    """Get trending movies."""
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key missing."}
+        
+    endpoint = f"{BASE_URL}/trending/movie/{time_window}"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US"}
+    try:
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"TMDB Trending API failed: {e}")
+        return {"error": str(e)}
+
+@retry_on_error()
+def search_multi_media(query: str, page: int = 1) -> dict:
+    """Search for movies, tv shows, and people by query."""
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key missing."}
+        
+    endpoint = f"{BASE_URL}/search/multi"
+    params = {"api_key": TMDB_API_KEY, "query": query, "language": "en-US", "page": page, "include_adult": False}
+    try:
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"TMDB Search Multi API failed: {e}")
+        return {"error": str(e)}
+

@@ -1,0 +1,836 @@
+'use client';
+
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Send, Sparkles, Film, User, Bot, Trash2, LogOut, AlertCircle, 
+  Mic, MicOff, X, Radar, 
+  Dice5, Library, HelpCircle, Share2
+} from 'lucide-react';
+import Link from 'next/link';
+import { 
+  getRecommendation, Message, isLoggedIn, logout, addToWatchlist, 
+  removeFromWatchlist, getWatchlist, addToHistory, getMovieTrailer, 
+  getPersona, getSurpriseRecommendation, LibraryItem, PersonaData
+} from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
+import { MovieCard, type MovieMetadata } from '@/components/MovieCard';
+import { TrailerModal } from '@/components/TrailerModal';
+import { CineHubDrawer, type HubTab } from '@/components/CineHubDrawer';
+import { MoodBar } from '@/components/MoodBar';
+import { PersonaCard } from '@/components/PersonaCard';
+import VibeRadar from '@/components/VibeRadar';
+import { OnboardingTour } from '@/components/OnboardingTour';
+
+
+export default function Home() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+  const [watchlist, setWatchlist] = useState<LibraryItem[]>([]);
+  const [selectedTrailer, setSelectedTrailer] = useState<MovieMetadata | null>(null);
+  const [trailerKey, setTrailerKey] = useState<string | null>(null);
+  const [isRadarOpen, setIsRadarOpen] = useState(false);
+  const [isPersonaCardOpen, setIsPersonaCardOpen] = useState(false);
+  const [persona, setPersona] = useState<PersonaData | null>(null);
+  const [, setIsTrailerLoading] = useState(false);
+
+  const [themeColor, setThemeColor] = useState('#ec4899'); 
+  const [isHubOpen, setIsHubOpen] = useState(false);
+  const [hubTab, setHubTab] = useState<HubTab>('vault');
+  const [showTour, setShowTour] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const router = useRouter();
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
+  // Auth & Data fetch helper
+  const fetchPersona = useCallback(async () => {
+    try {
+      const data = await getPersona();
+      setPersona(data);
+    } catch (e) {
+      console.error("Failed to fetch persona", e);
+    }
+  }, []);
+
+  const fetchWatchlist = useCallback(async () => {
+    try {
+      const data = await getWatchlist();
+      setWatchlist(data);
+      await fetchPersona(); // Refresh persona when watchlist changes
+    } catch (e) {
+      console.error("Failed to fetch watchlist", e);
+    }
+  }, [fetchPersona]);
+
+  // Auth & Data fetch
+  useEffect(() => {
+    setHasMounted(true);
+    const authenticated = isLoggedIn();
+    if (!authenticated) {
+      router.push('/login');
+    } else {
+      setIsAuthenticated(true);
+      fetchWatchlist();
+      
+      // Check for tour with a slight delay for hydration
+      setTimeout(() => {
+        const tourCompleted = localStorage.getItem('cinesync_tour_completed');
+        if (!tourCompleted) {
+          setShowTour(true);
+        }
+      }, 1000);
+
+    }
+  }, [router, fetchWatchlist]);
+
+
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Focus search with '/'
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+
+      // 2. Close all modals with 'Escape'
+      if (e.key === 'Escape') {
+        setIsHubOpen(false);
+        setIsPersonaCardOpen(false);
+        setIsRadarOpen(false);
+        setSelectedTrailer(null);
+        setTrailerKey(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Combined auto-scroll logic
+  useEffect(() => {
+    const timer = requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+      }
+    });
+    return () => cancelAnimationFrame(timer);
+  }, [messages, isLoading]);
+
+
+
+  const handleMarkWatched = async (movie: MovieMetadata) => {
+    try {
+      const tmdb_id = String(movie.id);
+      const title = movie.title;
+      const poster_path = movie.poster;
+
+      if (!tmdb_id || !title || !poster_path) {
+        console.error("Missing required fields for journaling", { tmdb_id, title, poster_path });
+        return;
+      }
+
+      await addToHistory(tmdb_id, title, poster_path);
+      // Optional: remove from watchlist when marked as watched
+      if (watchlist.some(m => String(m.tmdb_id) === tmdb_id)) {
+        await removeFromWatchlist(tmdb_id);
+        const data = await getWatchlist();
+        setWatchlist(data);
+      }
+      setHubTab('history');
+      setIsHubOpen(true); // Open hub to show the new journal entry
+      const personaData = await getPersona();
+      setPersona(personaData);
+    } catch (e) {
+      console.error("Mark watched failed", e);
+    }
+  };
+
+  const toggleWatchlist = async (movie: MovieMetadata) => {
+    const isWatched = watchlist.some(m => m.tmdb_id === movie.id);
+    try {
+      if (isWatched) {
+        await removeFromWatchlist(movie.id);
+        setWatchlist(prev => prev.filter(m => m.tmdb_id !== movie.id));
+      } else {
+        await addToWatchlist(movie.id, movie.title, movie.poster);
+        await fetchWatchlist();
+      }
+    } catch (e) {
+      console.error("Watchlist toggle error", e);
+    }
+  };
+
+  const handleSurpriseMe = async () => {
+    if (isLoading) return;
+    // Abort existing request
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await getSurpriseRecommendation(abortControllerRef.current.signal);
+      const assistantMessage: Message = { 
+        id: Date.now().toString(),
+        role: 'assistant', 
+        content: response 
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err: unknown) {
+      console.error("Surprise Me failed", err);
+      setError(err instanceof Error ? err.message : "Failed to find a surprise for you.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    // Abort existing request
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
+    const userMessage: Message = { 
+      id: Date.now().toString(),
+      role: 'user', 
+      content: input 
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    
+    // Smooth scroll to bottom
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }, 100);
+
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      setError(null);
+      // Pass the previous messages as history. The current input is handled separately by the backend.
+      const response = await getRecommendation(input, messages, abortControllerRef.current?.signal);
+      const assistantMessage: Message = { 
+        id: (Date.now() + 1).toString(),
+        role: 'assistant', 
+        content: response 
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "";
+      if (errorMsg === 'Session expired' || errorMsg === 'Unauthorized') {
+        setError("Your session has expired. Redirecting to login...");
+        return;
+      }
+      
+      const errorMessage = errorMsg || "Oops! My film reels got tangled. Please try again.";
+      setError(errorMessage);
+      
+      setMessages((prev) => [...prev, { 
+        id: (Date.now() + 2).toString(),
+        role: 'assistant', 
+        content: "I'm having a bit of trouble connecting right now. Let's try that again in a second!" 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Theme Color Logic - Update based on the latest recommendation
+  useEffect(() => {
+    const lastAssistantMessage = [...messages].reverse().find(m => m.role === 'assistant');
+    if (lastAssistantMessage) {
+      const metadataRegex = /\[METADATA: (\{[\s\S]*?\})\]/;
+      const match = metadataRegex.exec(lastAssistantMessage.content);
+      if (match) {
+        try {
+          const movieData = JSON.parse(match[1]);
+          if (movieData.poster && movieData.poster !== "None") {
+            const colors = ['#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b'];
+            const colorIndex = movieData.title.length % colors.length;
+            setThemeColor(colors[colorIndex]);
+          }
+        } catch (e) {
+          console.error("Failed to parse metadata for theme", e);
+        }
+      }
+    }
+  }, [messages]);
+
+  // Voice Search Logic
+  interface SpeechRecognitionSubtype {
+    continuous: boolean;
+    interimResults: boolean;
+    onresult: (event: unknown) => void;
+    onerror: (event: unknown) => void;
+    onend: () => void;
+    start: () => void;
+    stop: () => void;
+    abort: () => void;
+  }
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionSubtype | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      type SpeechConstructor = new () => SpeechRecognitionSubtype;
+      const win = window as unknown as { webkitSpeechRecognition: SpeechConstructor; SpeechRecognition: SpeechConstructor };
+      const SpeechClass = win.webkitSpeechRecognition || win.SpeechRecognition;
+      recognitionRef.current = new SpeechClass();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+
+      recognitionRef.current.onresult = (event: unknown) => {
+        const recognitionEvent = event as { results: { [key: number]: { [key: number]: { transcript: string } } } };
+        const transcript = recognitionEvent.results[0][0].transcript;
+        setInput(transcript);
+        setIsListening(false);
+        // Auto-submit after voice input
+        setTimeout(() => {
+          const form = document.querySelector('form');
+          if (form) form.requestSubmit();
+        }, 800);
+      };
+
+      recognitionRef.current.onerror = (event: unknown) => {
+        const recognitionError = event as { error: string };
+        console.error('Speech recognition error', recognitionError.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    }
+
+    return () => {
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+    };
+  }, []);
+
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      setIsListening(true);
+      recognitionRef.current?.start();
+    }
+  };
+
+  const handlePlayTrailer = async (movie: MovieMetadata | { id: string }) => {
+    const movieId = movie.id;
+    if (!movieId) {
+      console.error("Cannot play trailer: No movie ID provided", movie);
+      return;
+    }
+    setIsTrailerLoading(true);
+    try {
+      const key = await getMovieTrailer(movieId);
+      setTrailerKey(key);
+      if ('title' in movie) {
+        setSelectedTrailer(movie as MovieMetadata);
+      }
+    } catch (e) {
+      console.error("Failed to fetch trailer", e);
+      // Removed alert for better UX. Could add a toast notification here in the future.
+    } finally {
+      setIsTrailerLoading(false);
+    }
+
+  };
+
+  const clearHistory = () => {
+    if (messages.length === 0) return;
+    if (window.confirm("Clear entire conversation? This cannot be undone.")) {
+      setMessages([]);
+    }
+  };
+
+
+  const renderMessageContent = (content: string) => {
+    // Enhanced regex to handle potentially nested JSON or multi-line blocks more safely
+    const robustMetadataRegex = /\[METADATA: (\{[\s\S]*?\})(?=\s*\])\]/g;
+    const movies: MovieMetadata[] = [];
+
+    // 1. Extract metadata blocks
+    let match;
+    while ((match = robustMetadataRegex.exec(content)) !== null) {
+      try {
+        const movieData = JSON.parse(match[1]);
+        movies.push(movieData);
+      } catch (e) {
+        console.error("Failed to parse movie metadata", e);
+      }
+    }
+
+    // 2. Multi-pass cleaning of the content to remove metadata tags and their container bullets/lines
+    let cleanContent = content;
+
+    // Remove the metadata tag itself first
+    cleanContent = cleanContent.replace(/\[METADATA: \{[\s\S]*?\}\]/g, '');
+
+    // Remove any leftover empty list items (e.g., "- ", "* ", "• ") that only contained metadata
+    cleanContent = cleanContent.replace(/^\s*[-*•]\s*$/gm, '');
+
+    // Remove any empty lines created by removing the metadata
+    cleanContent = cleanContent.trim();
+
+    return (
+      <div className="space-y-4">
+        <div className="prose prose-invert prose-sm sm:prose-base max-w-none">
+          <ReactMarkdown
+            components={{
+              p: ({ children }) => <p className="mb-2 last:mb-0 font-medium text-white/90 leading-relaxed">{children}</p>,
+              ul: ({ children }) => <ul className="space-y-1 mb-3">{children}</ul>,
+              li: ({ children }) => <li className="list-disc ml-4 pl-1 text-white/80 text-sm sm:text-base">{children}</li>,
+              strong: ({ children }) => <strong className="font-black text-brand-pink">{children}</strong>,
+            }}
+          >
+            {cleanContent}
+          </ReactMarkdown>
+        </div>
+        {movies.length > 0 && (
+          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar -mx-2 px-2">
+            {movies.map((movie, i) => (
+              <MovieCard 
+                key={`${movie.id}-${i}`} 
+                movie={movie} 
+                isWatched={watchlist.some(m => m.tmdb_id === movie.id)}
+                onToggleWatchlist={() => toggleWatchlist(movie)}
+                onMarkWatched={() => handleMarkWatched(movie)}
+                onPlayTrailer={() => handlePlayTrailer(movie)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (!hasMounted || !isAuthenticated) {
+    return (
+      <div className="h-screen bg-[#050505] flex items-center justify-center text-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-brand-pink border-t-transparent rounded-full animate-spin" />
+          <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">Syncing Library...</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <main className="relative flex flex-col h-screen overflow-hidden bg-[#050505]">
+      {/* Global Error Banner */}
+      <AnimatePresence>
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4"
+          >
+            <div className="bg-red-500/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-red-400/20">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <p className="text-sm font-medium">{error}</p>
+              <button onClick={() => setError(null)} className="ml-auto hover:bg-white/10 p-1 rounded-full transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Animated Background Blobs */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.15, 0.2, 0.15],
+            backgroundColor: themeColor,
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+          className="absolute -top-[20%] -left-[10%] w-[80%] h-[80%] rounded-full blur-[140px]"
+        />
+        <motion.div
+          animate={{
+            scale: [1.2, 1, 1.2],
+            opacity: [0.05, 0.1, 0.05],
+            backgroundColor: themeColor === '#ec4899' ? '#8b5cf6' : themeColor,
+          }}
+          transition={{ duration: 12, repeat: Infinity, ease: "linear", delay: 1 }}
+          className="absolute top-[20%] -right-[10%] w-[70%] h-[70%] rounded-full blur-[140px]"
+        />
+      </div>
+      <motion.div
+        animate={{
+          scale: [1, 1.3, 1],
+          opacity: [0.1, 0.2, 0.1]
+        }}
+        transition={{ duration: 12, repeat: Infinity, delay: 1 }}
+        className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-brand-purple rounded-full blur-[150px] pointer-events-none"
+      />
+
+      <header className="z-30 flex items-center justify-between px-6 py-4 glass border-b border-white/10">
+        <motion.div
+          id="tour-header"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-3"
+        >
+          <div className="p-2 rounded-xl bg-gradient-brand shadow-lg shadow-brand-pink/20">
+            <Film className="w-6 h-6 text-white" />
+          </div>
+          <h1 className="text-2xl font-black tracking-tight text-gradient uppercase">CineSync AI</h1>
+        </motion.div>
+
+        <div className="flex items-center gap-2">
+          {persona && (
+            <motion.div
+              id="tour-persona"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="hidden xl:flex items-center gap-2 pr-1 pl-3 py-1 rounded-full bg-white/5 border border-white/10 group/persona cursor-pointer hover:bg-white/10 transition-colors"
+              onClick={() => setIsPersonaCardOpen(true)}
+            >
+              <span className="text-lg">{persona.badge}</span>
+              <span className="text-[10px] font-black uppercase tracking-wider text-white/60">{persona.title}</span>
+              <div className="p-1 rounded-full bg-brand-pink text-white scale-0 group-hover/persona:scale-100 transition-transform">
+                <Share2 className="w-3 h-3" />
+              </div>
+            </motion.div>
+          )}
+
+          <div className="hidden lg:flex items-center gap-2">
+            <button
+              onClick={handleSurpriseMe}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl glass border border-white/10 text-white/60 hover:text-white hover:border-brand-purple/50 transition-all"
+            >
+              <Dice5 className={cn("w-4 h-4 text-brand-purple", isLoading && "animate-spin")} />
+              <span className="text-[10px] font-black uppercase">Surprise</span>
+            </button>
+
+            <Link
+              id="tour-swipe"
+              href="/swipe"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl glass border border-white/10 text-white/60 hover:text-white hover:border-brand-pink/50 transition-all"
+            >
+              <Sparkles className="w-4 h-4 text-brand-pink" />
+              <span className="text-[10px] font-black uppercase">Swipe</span>
+            </Link>
+          </div>
+
+          <div className="h-6 w-[1px] bg-white/10 mx-1" />
+
+          {/* THE HUB - Centralized Access */}
+          <button
+            id="tour-vault"
+            onClick={() => { setHubTab('vault'); setIsHubOpen(true); }}
+            className="flex items-center gap-2.5 px-4 py-2.5 bg-brand-purple text-white rounded-xl shadow-lg shadow-brand-purple/20 hover:scale-105 active:scale-95 transition-all"
+          >
+            <Library className="w-4 h-4" />
+            <span className="text-sm font-black uppercase tracking-tight">My Hub</span>
+          </button>
+
+          <div className="h-6 w-[1px] bg-white/10 mx-1" />
+
+          <button
+            id="tour-universe"
+            onClick={() => setIsRadarOpen(true)}
+            className="p-2.5 rounded-xl glass border border-white/10 text-white/40 hover:text-white hover:border-brand-purple/50 transition-all"
+            title="Universe Radar"
+          >
+            <Radar className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={clearHistory}
+            className="p-2.5 rounded-xl hover:bg-white/5 text-white/20 hover:text-white transition-colors"
+            title="Clear Chat"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+
+          <div className="h-6 w-[1px] bg-white/10 mx-1" />
+
+          <button
+            onClick={() => logout()}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-red-500/20 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase hidden md:inline">Exit</span>
+          </button>
+
+          <button
+            onClick={() => setShowTour(true)}
+            className="p-2.5 rounded-xl text-white/20 hover:text-white"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Chat Area */}
+      <div
+        ref={scrollRef}
+        className="relative z-10 flex-1 px-4 py-8 overflow-y-auto no-scrollbar scroll-smooth"
+      >
+        <div className="max-w-2xl mx-auto space-y-8 pb-16">
+          <MoodBar 
+            onMoodSelect={(mood) => {
+            setThemeColor(mood.color);
+            setInput(mood.prompt);
+          }} />
+          
+          {messages.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center min-h-[35vh] text-center"
+            >
+              <div className="relative mb-5">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
+                  className="absolute inset-0 bg-gradient-to-r from-brand-pink to-brand-purple blur-3xl opacity-20"
+                />
+                <Sparkles className="relative w-10 h-10 text-brand-purple" />
+              </div>
+
+              <h2 className="mb-2 text-2xl sm:text-3xl font-black tracking-tighter leading-tight uppercase">
+                Discover your next <br /> <span className="text-gradient">Favorite Movie.</span>
+              </h2>
+              <p className="max-w-xs text-sm text-white/40 font-medium leading-relaxed">
+                Your agentic companion for deeper recommendations, <br /> vibe analysis, and real-time streaming info.
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-2 mt-8 max-w-xl">
+                {[
+                  { text: 'Sci-fi like Interstellar', icon: '🚀' },
+                  { text: 'Vibe of Joker (2019)', icon: '🃏' },
+                  { text: 'Best Hindi Rom-coms', icon: '💝' },
+                  { text: 'High-stakes Heist Thrillers', icon: '💎' }
+                ].map((item) => (
+                  <button
+                    key={item.text}
+                    onClick={() => setInput(item.text)}
+                    className="group px-3 py-2 text-[11px] font-bold transition-all border rounded-[2rem] glass border-white/10 hover:border-brand-pink/50 hover:bg-brand-pink/10 hover:scale-105 active:scale-95 flex items-center gap-2"
+                  >
+                    <span className="opacity-60 group-hover:opacity-100 transition-opacity">{item.icon}</span>
+                    <span className="text-white/80 group-hover:text-white">{item.text}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          ) : (
+            <AnimatePresence initial={false}>
+              {messages.map((message, idx) => (
+                <motion.div
+                  key={message.id || idx}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+                  className={cn(
+                    "flex w-full",
+                    message.role === 'user' ? "justify-end" : "justify-start"
+                  )}
+                >
+                  <div className={cn(
+                    "max-w-[95%] sm:max-w-[85%] flex gap-5 items-start",
+                    message.role === 'user' ? "flex-row-reverse text-right" : "flex-row text-left"
+                  )}>
+                    <div className={cn(
+                      "p-3.5 rounded-2xl shrink-0 shadow-2xl transition-transform hover:scale-110",
+                      message.role === 'user' ? "bg-gradient-brand shadow-brand-pink/30" : "glass border border-white/10 shadow-black/50"
+                    )}>
+                      {message.role === 'user' ? <User className="w-5 h-5 text-white" /> : <Bot className="w-5 h-5 text-brand-purple" />}
+                    </div>
+
+                    <div className={cn(
+                      "relative p-4 rounded-2xl text-sm leading-relaxed shadow-2xl",
+                      message.role === 'user'
+                        ? "bg-brand-pink/10 border border-brand-pink/20 text-white rounded-tr-none font-bold"
+                        : "glass text-white/90 rounded-tl-none border border-white/10"
+                    )}>
+                      {message.role === 'assistant' ? renderMessageContent(message.content) : (
+                        <div className="whitespace-pre-wrap font-medium">{message.content}</div>
+                      )}
+
+                      {/* Message Tail/Indicator */}
+                      <div className={cn(
+                        "absolute top-0 w-4 h-4",
+                        message.role === 'user' ? "right-[-8px] text-brand-pink/20" : "left-[-8px] text-white/10"
+                      )}>
+                        {/* SVG triangle could go here for extra polish */}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          )}
+
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex justify-start"
+            >
+              <div className="flex gap-4 items-center glass px-6 py-5 rounded-[2rem] rounded-tl-none border border-white/10 shadow-xl">
+                <div className="flex space-x-2.5">
+                  <motion.div
+                    animate={{ y: [0, -6, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay: 0 }}
+                    className="w-3 h-3 rounded-full bg-brand-pink"
+                  />
+                  <motion.div
+                    animate={{ y: [0, -6, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay: 0.15 }}
+                    className="w-3 h-3 rounded-full bg-brand-pink"
+                  />
+                  <motion.div
+                    animate={{ y: [0, -6, 0] }}
+                    transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+                    className="w-3 h-3 rounded-full bg-brand-pink"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </div>
+
+      {/* Input Bar Section */}
+      <div id="tour-input" className="relative z-30 w-full max-w-3xl px-4 pb-8 mt-auto mx-auto">
+        <div className="glass-dark border border-white/10 rounded-[2rem] p-1.5 shadow-2xl backdrop-blur-3xl focus-within:border-brand-pink/40 transition-all duration-300">
+          <form
+            onSubmit={handleSubmit}
+            className="relative flex items-center"
+          >
+            <div className="relative group/voice">
+              <button
+                id="tour-voice"
+                type="button"
+                onClick={toggleListening}
+                aria-label={isListening ? "Stop listening" : "Start voice search"}
+                className={cn(
+                  "p-3 rounded-xl transition-all",
+                  isListening 
+                    ? "bg-brand-pink text-white animate-pulse" 
+                    : "bg-white/5 text-white/40 hover:text-white hover:bg-white/10"
+                )}
+              >
+                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+            </div>
+
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={isListening ? "Listening..." : "Find a movie, analyze a vibe..."}
+              className="flex-1 w-full bg-transparent border-none outline-none focus:ring-0 px-4 py-4 text-lg placeholder:text-white/20 text-white font-medium"
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="mr-1.5 p-4 transition-all rounded-[1.5rem] bg-gradient-brand text-white shadow-xl shadow-brand-pink/20 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:grayscale disabled:scale-100"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </form>
+        </div>
+        <div className="flex justify-center gap-6 mt-4">
+          <p className="text-[10px] uppercase tracking-[0.2em] font-black text-white/10 flex items-center gap-2">
+            <span className="w-1 h-1 bg-brand-pink rounded-full" />
+            Deeper Recommendations
+          </p>
+          <p className="text-[10px] uppercase tracking-[0.2em] font-black text-white/10 flex items-center gap-2">
+            <span className="w-1 h-1 bg-brand-purple rounded-full" />
+            Vibe Analysis
+          </p>
+          <p className="text-[10px] uppercase tracking-[0.2em] font-black text-white/10 flex items-center gap-2">
+            <span className="w-1 h-1 bg-white rounded-full opacity-20" />
+            Watch Providers
+          </p>
+        </div>
+      </div>
+      
+      <AnimatePresence>
+        {selectedTrailer && trailerKey && (
+          <TrailerModal 
+            movie={selectedTrailer} 
+            trailerKey={trailerKey}
+            onClose={() => {
+              setSelectedTrailer(null);
+              setTrailerKey(null);
+            }} 
+          />
+        )}
+      </AnimatePresence>
+
+      <CineHubDrawer 
+        isOpen={isHubOpen} 
+        onClose={() => setIsHubOpen(false)} 
+        initialTab={hubTab}
+        onPlayTrailer={(movie) => handlePlayTrailer(movie)}
+      />
+      
+      <AnimatePresence>
+        {showTour && (
+          <OnboardingTour onComplete={() => {
+            setShowTour(false);
+            localStorage.setItem('cinesync_tour_completed', 'true');
+          }} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isRadarOpen && (
+          <VibeRadar 
+            onClose={() => setIsRadarOpen(false)} 
+            onNavigate={(movieId) => {
+              setIsRadarOpen(false);
+              handlePlayTrailer({ id: movieId });
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isPersonaCardOpen && persona && persona.title && persona.badge && (
+          <PersonaCard 
+            persona={{
+              title: persona.title,
+              badge: persona.badge,
+              description: persona.desc || "A mysterious cinephile..."
+            }}
+            stats={{
+              watchlistCount: persona.watchlist_count || 0,
+              historyCount: persona.history_count || 0
+            }}
+            onClose={() => setIsPersonaCardOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+    </main>
+  );
+}
