@@ -534,6 +534,23 @@ def get_movie_watch_providers_json(movie_id: int) -> dict:
         return {"error": str(e)}
 
 @retry_on_error()
+def get_movie_release_dates_json(movie_id: int) -> dict:
+    """Get release dates and certifications for a movie."""
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key missing."}
+        
+    endpoint = f"{BASE_URL}/movie/{movie_id}/release_dates"
+    params = {"api_key": TMDB_API_KEY}
+    try:
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"TMDB Release Dates API failed: {e}")
+        return {"error": str(e)}
+
+@retry_on_error()
 def get_movie_images_json(movie_id: int) -> dict:
     """Get images (backdrops, posters) for a movie."""
     TMDB_API_KEY = os.getenv("TMDB_API_KEY")

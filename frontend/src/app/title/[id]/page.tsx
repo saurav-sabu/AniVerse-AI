@@ -8,7 +8,7 @@ import { Star, Clock, Calendar, ArrowLeft, PlayCircle, MessageSquare, Send, Penc
 import { 
   getMovieDetails, getMovieCredits, getReviews, createReview, getTMDBImageUrl, 
   isLoggedIn, getMovieTrailer, getUserEmail, updateReview,
-  getMovieRecommendations, getMovieProviders, getMovieImages,
+  getMovieRecommendations, getMovieProviders, getMovieImages, getMovieReleaseDates,
   getWatchlist, addToWatchlist, removeFromWatchlist
 } from '@/lib/api';
 import { TrailerModal } from '@/components/TrailerModal';
@@ -38,6 +38,7 @@ export default function TitleDetailsPage() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [providers, setProviders] = useState<any>(null);
   const [images, setImages] = useState<any>(null);
+  const [releaseDates, setReleaseDates] = useState<any>(null);
   const [inWatchlist, setInWatchlist] = useState(false);
   const [isWatchlistUpdating, setIsWatchlistUpdating] = useState(false);
 
@@ -47,14 +48,15 @@ export default function TitleDetailsPage() {
     
     async function fetchData() {
       try {
-        const [movieData, creditsData, reviewsData, recsData, provsData, imgsData, watchData] = await Promise.all([
+        const [movieData, creditsData, reviewsData, recsData, provsData, imgsData, watchData, datesData] = await Promise.all([
           getMovieDetails(id as string),
           getMovieCredits(id as string),
           getReviews(id as string),
           getMovieRecommendations(id as string).catch(() => ({ results: [] })),
           getMovieProviders(id as string).catch(() => ({ results: {} })),
           getMovieImages(id as string).catch(() => ({ backdrops: [], posters: [] })),
-          isLoggedIn() ? getWatchlist().catch(() => []) : Promise.resolve([])
+          isLoggedIn() ? getWatchlist().catch(() => []) : Promise.resolve([]),
+          getMovieReleaseDates(id as string).catch(() => ({ results: [] }))
         ]);
         setMovie(movieData);
         setCredits(creditsData);
@@ -67,6 +69,7 @@ export default function TitleDetailsPage() {
         setProviders(usProv || fallbackProv || null);
         
         setImages(imgsData);
+        setReleaseDates(datesData);
         setInWatchlist(watchData.some((item: any) => String(item.tmdb_id) === String(id)));
       } catch (err) {
         console.error("Failed to fetch title data", err);
@@ -173,6 +176,23 @@ export default function TitleDetailsPage() {
     return keyCrew;
   };
 
+  const getCertification = () => {
+    if (!releaseDates?.results) return null;
+    const us = releaseDates.results.find((r: any) => r.iso_3166_1 === 'US');
+    if (!us) return null;
+    const cert = us.release_dates.find((d: any) => d.certification && d.certification !== '')?.certification;
+    return cert || null;
+  };
+
+  const formatCurrency = (amount: number) => {
+    if (!amount || amount === 0) return 'N/A';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   const getRatingStats = () => {
     if (reviews.length === 0) return null;
     
@@ -244,10 +264,13 @@ export default function TitleDetailsPage() {
           <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-2">{movie.title}</h1>
           <p className="text-white/60 italic mb-6">{movie.tagline}</p>
 
-          <div className="flex flex-wrap items-center gap-6 mb-8 text-sm font-medium text-white/80">
-            <div className="flex items-center gap-1">
-              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-              <span className="text-lg font-bold text-white">{movie.vote_average?.toFixed(1)}</span>
+          <div className="flex flex-wrap items-center gap-4 text-sm text-white/70 mb-6">
+            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/10 rounded-md text-xs font-bold text-white">
+              {getCertification() || 'NR'}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+              <span className="font-bold text-white">{movie.vote_average?.toFixed(1)}</span>
               <span className="text-white/40">/10</span>
             </div>
             <div className="flex items-center gap-2">
@@ -334,6 +357,26 @@ export default function TitleDetailsPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Financials Section */}
+          {movie.budget > 0 && (
+            <div className="mt-8 grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-1">Budget</p>
+                <p className="text-lg font-bold text-white">{formatCurrency(movie.budget)}</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-1">Revenue</p>
+                <p className="text-lg font-bold text-white">{formatCurrency(movie.revenue)}</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hidden md:block">
+                <p className="text-xs font-medium text-white/40 uppercase tracking-wider mb-1">Financial Status</p>
+                <p className={`text-lg font-bold ${movie.revenue > movie.budget ? 'text-green-400' : 'text-brand-pink'}`}>
+                  {movie.revenue > movie.budget ? 'Box Office Hit' : 'Underperformed'}
+                </p>
               </div>
             </div>
           )}

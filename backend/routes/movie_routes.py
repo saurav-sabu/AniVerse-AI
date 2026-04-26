@@ -3,7 +3,8 @@ from backend.tools.tmdb_tool import (
     get_movie_trailer, get_movie_details, get_movie_credits,
     get_person_details, get_person_movie_credits,
     get_top_rated_movies, get_trending_movies, search_multi_media,
-    get_movie_recommendations_json, get_movie_watch_providers_json, get_movie_images_json
+    get_movie_recommendations_json, get_movie_watch_providers_json, get_movie_images_json,
+    get_movie_release_dates_json
 )
 from backend.auth.get_user import get_current_user
 from backend.models.user_model import User
@@ -139,6 +140,17 @@ def fetch_movie_providers(request: Request, tmdb_id: int):
 def fetch_movie_images(request: Request, tmdb_id: int):
     try:
         data = get_movie_images_json(movie_id=tmdb_id)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/details/{tmdb_id}/release_dates")
+@limiter.limit("30/minute")
+def fetch_movie_release_dates(request: Request, tmdb_id: int):
+    try:
+        data = get_movie_release_dates_json(movie_id=tmdb_id)
         if "error" in data:
             raise HTTPException(status_code=500, detail=data["error"])
         return data

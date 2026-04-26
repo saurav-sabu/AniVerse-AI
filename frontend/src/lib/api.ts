@@ -426,4 +426,8 @@ export async function getMovieImages(tmdbId: string | number): Promise<any> {
     return fetchWithError(`/movies/details/${tmdbId}/images`);
 }
 
+export async function getMovieReleaseDates(tmdbId: string | number): Promise<any> {
+    return fetchWithError(`/movies/details/${tmdbId}/release_dates`);
+}
+
 
