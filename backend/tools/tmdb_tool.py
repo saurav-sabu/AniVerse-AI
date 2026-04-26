@@ -499,3 +499,57 @@ def search_multi_media(query: str, page: int = 1) -> dict:
         logger.error(f"TMDB Search Multi API failed: {e}")
         return {"error": str(e)}
 
+@retry_on_error()
+def get_movie_recommendations_json(movie_id: int) -> dict:
+    """Get recommendations for a movie."""
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key missing."}
+        
+    endpoint = f"{BASE_URL}/movie/{movie_id}/recommendations"
+    params = {"api_key": TMDB_API_KEY, "language": "en-US", "page": 1}
+    try:
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"TMDB Recommendations API failed: {e}")
+        return {"error": str(e)}
+
+@retry_on_error()
+def get_movie_watch_providers_json(movie_id: int) -> dict:
+    """Get watch providers for a movie."""
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key missing."}
+        
+    endpoint = f"{BASE_URL}/movie/{movie_id}/watch/providers"
+    params = {"api_key": TMDB_API_KEY}
+    try:
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"TMDB Watch Providers API failed: {e}")
+        return {"error": str(e)}
+
+@retry_on_error()
+def get_movie_images_json(movie_id: int) -> dict:
+    """Get images (backdrops, posters) for a movie."""
+    TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+    if not TMDB_API_KEY:
+        return {"error": "TMDB API key missing."}
+        
+    endpoint = f"{BASE_URL}/movie/{movie_id}/images"
+    # Do not set language to strictly en-US to get more images, 
+    # but TMDB often requires include_image_language if we want localized ones.
+    params = {"api_key": TMDB_API_KEY, "include_image_language": "en,null"}
+    try:
+        response = requests.get(endpoint, params=params, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        logger.error(f"TMDB Images API failed: {e}")
+        return {"error": str(e)}
+
+

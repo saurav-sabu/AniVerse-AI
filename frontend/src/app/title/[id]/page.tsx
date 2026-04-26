@@ -4,8 +4,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Star, Clock, Calendar, ArrowLeft, PlayCircle, MessageSquare, Send, Pencil, X, Check } from 'lucide-react';
-import { getMovieDetails, getMovieCredits, getReviews, createReview, getTMDBImageUrl, isLoggedIn, getMovieTrailer, getUserEmail, updateReview } from '@/lib/api';
+import { Star, Clock, Calendar, ArrowLeft, PlayCircle, MessageSquare, Send, Pencil, X, Check, BookmarkPlus, BookmarkCheck } from 'lucide-react';
+import { 
+  getMovieDetails, getMovieCredits, getReviews, createReview, getTMDBImageUrl, 
+  isLoggedIn, getMovieTrailer, getUserEmail, updateReview,
+  getMovieRecommendations, getMovieProviders, getMovieImages,
+  getWatchlist, addToWatchlist, removeFromWatchlist
+} from '@/lib/api';
 import { TrailerModal } from '@/components/TrailerModal';
 import ReactMarkdown from 'react-markdown';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
@@ -28,6 +33,13 @@ export default function TitleDetailsPage() {
   const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editRating, setEditRating] = useState(5);
+  
+  // New features state
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [providers, setProviders] = useState<any>(null);
+  const [images, setImages] = useState<any>(null);
+  const [inWatchlist, setInWatchlist] = useState(false);
+  const [isWatchlistUpdating, setIsWatchlistUpdating] = useState(false);
 
   useEffect(() => {
     setIsAuth(isLoggedIn());
@@ -35,14 +47,27 @@ export default function TitleDetailsPage() {
     
     async function fetchData() {
       try {
-        const [movieData, creditsData, reviewsData] = await Promise.all([
+        const [movieData, creditsData, reviewsData, recsData, provsData, imgsData, watchData] = await Promise.all([
           getMovieDetails(id as string),
           getMovieCredits(id as string),
-          getReviews(id as string)
+          getReviews(id as string),
+          getMovieRecommendations(id as string).catch(() => ({ results: [] })),
+          getMovieProviders(id as string).catch(() => ({ results: {} })),
+          getMovieImages(id as string).catch(() => ({ backdrops: [], posters: [] })),
+          isLoggedIn() ? getWatchlist().catch(() => []) : Promise.resolve([])
         ]);
         setMovie(movieData);
         setCredits(creditsData);
         setReviews(reviewsData);
+        setRecommendations(recsData?.results || []);
+        
+        // Find US providers, or fallback to the first available region
+        const usProv = provsData?.results?.US;
+        const fallbackProv = provsData?.results ? Object.values(provsData.results)[0] : null;
+        setProviders(usProv || fallbackProv || null);
+        
+        setImages(imgsData);
+        setInWatchlist(watchData.some((item: any) => String(item.tmdb_id) === String(id)));
       } catch (err) {
         console.error("Failed to fetch title data", err);
       } finally {
@@ -105,6 +130,68 @@ export default function TitleDetailsPage() {
     } finally {
       setIsTrailerLoading(false);
     }
+  };
+
+  const toggleWatchlist = async () => {
+    if (!isAuth) {
+      router.push('/login');
+      return;
+    }
+    
+    setIsWatchlistUpdating(true);
+    try {
+      if (inWatchlist) {
+        await removeFromWatchlist(id as string);
+        setInWatchlist(false);
+      } else {
+        await addToWatchlist({
+          tmdb_id: String(id),
+          title: movie.title,
+          poster_path: movie.poster_path,
+          genres: movie.genres?.map((g: any) => g.name).join(', ')
+        });
+        setInWatchlist(true);
+      }
+    } catch (err) {
+      console.error('Failed to toggle watchlist', err);
+    } finally {
+      setIsWatchlistUpdating(false);
+    }
+  };
+
+  const getCrew = () => {
+    if (!credits?.crew) return [];
+    const directors = credits.crew.filter((c: any) => c.job === 'Director');
+    const writers = credits.crew.filter((c: any) => c.department === 'Writing');
+    const composers = credits.crew.filter((c: any) => c.job === 'Original Music Composer' || c.job === 'Music');
+    
+    const keyCrew = [];
+    if (directors.length > 0) keyCrew.push({ title: 'Director', name: directors[0].name });
+    if (writers.length > 0) keyCrew.push({ title: 'Writer', name: writers[0].name });
+    if (composers.length > 0) keyCrew.push({ title: 'Composer', name: composers[0].name });
+    
+    return keyCrew;
+  };
+
+  const getRatingStats = () => {
+    if (reviews.length === 0) return null;
+    
+    const stats: Record<number, number> = { 10: 0, 9: 0, 8: 0, 7: 0, 6: 0, 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    let sum = 0;
+    
+    reviews.forEach(r => {
+      const rating = Math.round(r.rating);
+      if (stats[rating] !== undefined) {
+        stats[rating]++;
+      }
+      sum += r.rating;
+    });
+    
+    return {
+      average: (sum / reviews.length).toFixed(1),
+      total: reviews.length,
+      distribution: stats
+    };
   };
 
   if (isLoading) {
@@ -182,16 +269,74 @@ export default function TitleDetailsPage() {
           </div>
 
           <h3 className="text-xl font-bold mb-3">Overview</h3>
-          <p className="text-white/80 leading-relaxed max-w-3xl mb-8">{movie.overview}</p>
+          <p className="text-white/80 leading-relaxed max-w-3xl mb-6">{movie.overview}</p>
 
-          <button 
-            onClick={handleWatchTrailer}
-            disabled={isTrailerLoading}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-brand rounded-xl font-bold hover:scale-105 active:scale-95 transition-transform shadow-lg shadow-brand-pink/20 disabled:opacity-50"
-          >
-            <PlayCircle className="w-5 h-5" />
-            {isTrailerLoading ? "Loading..." : "Watch Trailer"}
-          </button>
+          <div className="flex gap-8 mb-8">
+            {getCrew().map((crew: any, idx: number) => (
+              <div key={idx} className="flex flex-col">
+                <span className="font-bold">{crew.name}</span>
+                <span className="text-sm text-white/50">{crew.title}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-4 mb-8">
+            <button 
+              onClick={handleWatchTrailer}
+              disabled={isTrailerLoading}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-brand rounded-xl font-bold hover:scale-105 active:scale-95 transition-transform shadow-lg shadow-brand-pink/20 disabled:opacity-50"
+            >
+              <PlayCircle className="w-5 h-5" />
+              {isTrailerLoading ? "Loading..." : "Watch Trailer"}
+            </button>
+            
+            <button
+              onClick={toggleWatchlist}
+              disabled={isWatchlistUpdating}
+              className={`flex items-center justify-center p-3 rounded-xl border border-white/10 hover:bg-white/5 transition-all ${inWatchlist ? 'text-brand-pink border-brand-pink/30 bg-brand-pink/10' : 'text-white'}`}
+              title={inWatchlist ? "Remove from Watchlist" : "Add to Watchlist"}
+            >
+              {inWatchlist ? <BookmarkCheck className="w-5 h-5" /> : <BookmarkPlus className="w-5 h-5" />}
+            </button>
+          </div>
+
+          {providers && (Object.keys(providers).length > 0) && (
+            <div className="mb-8 p-4 glass rounded-xl border border-white/5 inline-block">
+              <h4 className="text-sm font-bold text-white/60 mb-3 uppercase tracking-wider">Where to Watch</h4>
+              <div className="flex gap-6">
+                {providers.flatrate && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-brand-pink">Stream</span>
+                    <div className="flex gap-2">
+                      {providers.flatrate.slice(0, 3).map((p: any) => (
+                        <img key={p.provider_id} src={getTMDBImageUrl(p.logo_path)} alt={p.provider_name} className="w-8 h-8 rounded-md" title={p.provider_name} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {providers.rent && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-white/60">Rent</span>
+                    <div className="flex gap-2">
+                      {providers.rent.slice(0, 3).map((p: any) => (
+                        <img key={p.provider_id} src={getTMDBImageUrl(p.logo_path)} alt={p.provider_name} className="w-8 h-8 rounded-md opacity-70 hover:opacity-100" title={p.provider_name} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {providers.buy && !providers.rent && (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-bold text-white/60">Buy</span>
+                    <div className="flex gap-2">
+                      {providers.buy.slice(0, 3).map((p: any) => (
+                        <img key={p.provider_id} src={getTMDBImageUrl(p.logo_path)} alt={p.provider_name} className="w-8 h-8 rounded-md opacity-70 hover:opacity-100" title={p.provider_name} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -226,6 +371,43 @@ export default function TitleDetailsPage() {
         <div>
           <h2 className="text-2xl font-black uppercase tracking-wider mb-6 border-b border-white/10 pb-4">User Reviews</h2>
           
+          {(() => {
+            const stats = getRatingStats();
+            if (!stats) return null;
+            return (
+              <div className="mb-8 p-6 glass border border-white/10 rounded-2xl flex flex-col md:flex-row gap-8 items-center">
+                <div className="flex flex-col items-center justify-center min-w-[120px]">
+                  <span className="text-5xl font-black text-white">{stats.average}</span>
+                  <div className="flex text-yellow-400 my-1">
+                    {[1,2,3,4,5].map(i => (
+                      <Star key={i} className={`w-4 h-4 ${i <= Math.round(Number(stats.average)/2) ? 'fill-yellow-400' : 'text-white/20'}`} />
+                    ))}
+                  </div>
+                  <span className="text-xs text-white/50">{stats.total} reviews</span>
+                </div>
+                
+                <div className="flex-1 w-full space-y-1.5">
+                  {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map(rating => {
+                    const count = stats.distribution[rating];
+                    const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                    return (
+                      <div key={rating} className="flex items-center gap-3 text-xs">
+                        <span className="w-6 text-right font-medium text-white/60">{rating}</span>
+                        <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-brand-pink rounded-full transition-all duration-500"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="w-8 text-white/40">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {isAuth ? (
             <form onSubmit={submitReview} className="mb-8 p-4 glass border border-white/10 rounded-2xl">
               <h4 className="font-bold mb-3 flex items-center gap-2"><MessageSquare className="w-4 h-4 text-brand-pink" /> Write a Review</h4>
@@ -352,6 +534,49 @@ export default function TitleDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Image Gallery */}
+      {images && images.backdrops && images.backdrops.length > 0 && (
+        <div className="container mx-auto px-4 mt-16 border-t border-white/10 pt-8">
+          <h2 className="text-2xl font-black uppercase tracking-wider mb-6">Production Stills</h2>
+          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar snap-x">
+            {images.backdrops.slice(0, 10).map((img: any, idx: number) => (
+              <div key={idx} className="shrink-0 w-80 md:w-[500px] aspect-video rounded-xl overflow-hidden snap-center border border-white/10">
+                <img 
+                  src={getTMDBImageUrl(img.file_path, 'original')} 
+                  alt="Production Still" 
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Similar Movies */}
+      {recommendations && recommendations.length > 0 && (
+        <div className="container mx-auto px-4 mt-16 border-t border-white/10 pt-8">
+          <h2 className="text-2xl font-black uppercase tracking-wider mb-6">Similar Movies</h2>
+          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar snap-x">
+            {recommendations.map((rec: any) => (
+              <Link href={`/title/${rec.id}`} key={rec.id} className="shrink-0 w-36 md:w-48 group snap-start">
+                <div className="aspect-[2/3] rounded-xl overflow-hidden mb-2 border border-white/10 bg-white/5">
+                  {rec.poster_path ? (
+                    <img 
+                      src={getTMDBImageUrl(rec.poster_path)} 
+                      alt={rec.title} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white/20 text-xs">No Image</div>
+                  )}
+                </div>
+                <h4 className="font-bold text-sm truncate group-hover:text-brand-pink transition-colors">{rec.title || rec.name}</h4>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <AnimatePresence>
         {showTrailer && (

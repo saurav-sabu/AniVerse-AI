@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from backend.tools.tmdb_tool import (
     get_movie_trailer, get_movie_details, get_movie_credits,
     get_person_details, get_person_movie_credits,
-    get_top_rated_movies, get_trending_movies, search_multi_media
+    get_top_rated_movies, get_trending_movies, search_multi_media,
+    get_movie_recommendations_json, get_movie_watch_providers_json, get_movie_images_json
 )
 from backend.auth.get_user import get_current_user
 from backend.models.user_model import User
@@ -105,6 +106,39 @@ def fetch_person_credits(request: Request, person_id: int):
 def search_media(request: Request, query: str, page: int = 1):
     try:
         data = search_multi_media(query=query, page=page)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/details/{tmdb_id}/recommendations")
+@limiter.limit("30/minute")
+def fetch_movie_recommendations(request: Request, tmdb_id: int):
+    try:
+        data = get_movie_recommendations_json(movie_id=tmdb_id)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/details/{tmdb_id}/providers")
+@limiter.limit("30/minute")
+def fetch_movie_providers(request: Request, tmdb_id: int):
+    try:
+        data = get_movie_watch_providers_json(movie_id=tmdb_id)
+        if "error" in data:
+            raise HTTPException(status_code=500, detail=data["error"])
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/details/{tmdb_id}/images")
+@limiter.limit("30/minute")
+def fetch_movie_images(request: Request, tmdb_id: int):
+    try:
+        data = get_movie_images_json(movie_id=tmdb_id)
         if "error" in data:
             raise HTTPException(status_code=500, detail=data["error"])
         return data

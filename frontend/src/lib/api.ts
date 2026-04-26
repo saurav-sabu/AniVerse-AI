@@ -208,10 +208,14 @@ export async function getSurpriseRecommendation(signal?: AbortSignal): Promise<s
     const data = await fetchWithError<RecommendResponse>('/recommend/surprise', { signal });
     return data.response;
 }
-export async function addToWatchlist(tmdb_id: string, title: string, poster_path: string): Promise<void> {
+export async function addToWatchlist(tmdb_id: string | any, title?: string, poster_path?: string, genres?: string): Promise<void> {
+    const body = typeof tmdb_id === 'object' 
+        ? tmdb_id 
+        : { tmdb_id: String(tmdb_id), title, poster_path, genres };
+    
     await fetchWithError('/library/watchlist', {
         method: 'POST',
-        body: JSON.stringify({ tmdb_id, title, poster_path }),
+        body: JSON.stringify(body),
     });
 }
 
@@ -219,7 +223,7 @@ export async function getWatchlist(): Promise<LibraryItem[]> {
     return fetchWithError('/library/watchlist');
 }
 
-export async function removeFromWatchlist(tmdb_id: string): Promise<void> {
+export async function removeFromWatchlist(tmdb_id: string | number): Promise<void> {
     await fetchWithError(`/library/watchlist/${tmdb_id}`, {
         method: 'DELETE',
     });
@@ -409,3 +413,17 @@ export async function updateReview(reviewId: number, rating?: number, content?: 
 export async function deleteReview(reviewId: number): Promise<{ message: string }> {
     return fetchWithError(`/reviews/${reviewId}`, { method: 'DELETE' });
 }
+
+export async function getMovieRecommendations(tmdbId: string | number): Promise<any> {
+    return fetchWithError(`/movies/details/${tmdbId}/recommendations`);
+}
+
+export async function getMovieProviders(tmdbId: string | number): Promise<any> {
+    return fetchWithError(`/movies/details/${tmdbId}/providers`);
+}
+
+export async function getMovieImages(tmdbId: string | number): Promise<any> {
+    return fetchWithError(`/movies/details/${tmdbId}/images`);
+}
+
+
