@@ -110,9 +110,19 @@ export const isLoggedIn = () => {
     }
 }
 
+export const getUserEmail = () => {
+    if (typeof window === 'undefined') return null;
+    try {
+        return localStorage.getItem('cinesync_user_email');
+    } catch {
+        return null;
+    }
+}
+
 export const logout = async () => {
     if (typeof window !== 'undefined') {
         localStorage.removeItem('cinesync_logged_in');
+        localStorage.removeItem('cinesync_user_email');
         // Clear all session storage as well for safety
         sessionStorage.clear();
         
@@ -139,6 +149,7 @@ export async function loginUser(email: string, password: string): Promise<void> 
 
     if (typeof window !== 'undefined') {
         localStorage.setItem('cinesync_logged_in', 'true');
+        localStorage.setItem('cinesync_user_email', email);
     }
 }
 
@@ -151,6 +162,7 @@ export async function registerUser(email: string, password: string): Promise<voi
 
     if (typeof window !== 'undefined') {
         localStorage.setItem('cinesync_logged_in', 'true');
+        localStorage.setItem('cinesync_user_email', email);
     }
 }
 
@@ -368,6 +380,7 @@ export async function getPersonCredits(personId: string | number): Promise<any> 
 export interface Review {
     id: number;
     user_id: number;
+    user_email?: string;
     tmdb_id: string;
     rating: number;
     content: string | null;
@@ -380,7 +393,7 @@ export async function getReviews(tmdbId: string | number): Promise<Review[]> {
 }
 
 export async function createReview(tmdbId: string, rating: number, content: string): Promise<Review> {
-    return fetchWithError('/reviews/', {
+    return fetchWithError('/reviews', {
         method: 'POST',
         body: JSON.stringify({ tmdb_id: tmdbId, rating, content }),
     });

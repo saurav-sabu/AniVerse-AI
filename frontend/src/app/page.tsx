@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Film, TrendingUp, Star, Search, PlayCircle, Trophy, BarChart2 } from 'lucide-react';
-import { getTrendingMovies, getTopRatedMovies, getTMDBImageUrl } from '@/lib/api';
+import { getTrendingMovies, getTopRatedMovies, getTMDBImageUrl, isLoggedIn, logout, getUserEmail } from '@/lib/api';
 import { MovieCard, type MovieMetadata } from '@/components/MovieCard';
 import { HorizontalScroller } from '@/components/HorizontalScroller';
 import { SearchBar } from '@/components/SearchBar';
@@ -13,8 +13,12 @@ export default function HomePage() {
   const [trending, setTrending] = useState<any[]>([]);
   const [topRated, setTopRated] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuth, setIsAuth] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    setIsAuth(isLoggedIn());
+    setUserEmail(getUserEmail());
     async function fetchData() {
       try {
         const [trendData, topData] = await Promise.all([
@@ -71,12 +75,23 @@ export default function HomePage() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <Link href="/login" className="px-4 py-2 text-sm font-bold text-white/80 hover:text-white transition-colors">
-            Log In
-          </Link>
-          <Link href="/register" className="px-4 py-2 text-sm font-bold bg-white text-black rounded-lg shadow-lg hover:scale-105 active:scale-95 transition-all">
-            Sign Up
-          </Link>
+          {isAuth ? (
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-white/60">{userEmail}</span>
+              <button onClick={logout} className="px-4 py-2 text-sm font-bold text-white/80 hover:text-white transition-colors">
+                Log Out
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link href="/login" className="px-4 py-2 text-sm font-bold text-white/80 hover:text-white transition-colors">
+                Log In
+              </Link>
+              <Link href="/register" className="px-4 py-2 text-sm font-bold bg-white text-black rounded-lg shadow-lg hover:scale-105 active:scale-95 transition-all">
+                Sign Up
+              </Link>
+            </>
+          )}
         </div>
       </header>
 

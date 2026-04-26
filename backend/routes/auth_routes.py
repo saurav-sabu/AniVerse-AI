@@ -58,7 +58,8 @@ def register(request: Request, user: UserCreate, db: Session = Depends(get_db)):
             httponly=True, 
             samesite="lax", 
             secure=_is_secure_cookie(request), 
-            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            path="/"
         )
 
         
@@ -92,7 +93,8 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
         httponly=True, 
         samesite="lax", 
         secure=_is_secure_cookie(request),
-        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/"
     )
 
     

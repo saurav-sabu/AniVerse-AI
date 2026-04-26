@@ -17,6 +17,7 @@ class ReviewUpdate(BaseModel):
 class ReviewResponse(ReviewBase):
     id: int
     user_id: int
+    user_email: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

@@ -17,10 +17,17 @@ router = APIRouter(prefix="/reviews", tags=["reviews"])
 @limiter.limit("30/minute")
 def get_reviews(request: Request, tmdb_id: str, skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
     """Public endpoint to get reviews for a specific movie/TV show."""
-    reviews = db.query(Review).filter(Review.tmdb_id == tmdb_id).order_by(Review.created_at.desc()).offset(skip).limit(limit).all()
-    return reviews
+    results = db.query(Review, User.email).join(User, Review.user_id == User.id).filter(Review.tmdb_id == tmdb_id).order_by(Review.created_at.desc()).offset(skip).limit(limit).all()
+    
+    formatted_reviews = []
+    for review, email in results:
+        review_dict = review.__dict__.copy()
+        review_dict['user_email'] = email
+        formatted_reviews.append(review_dict)
+        
+    return formatted_reviews
 
-@router.post("/", response_model=ReviewResponse)
+@router.post("", response_model=ReviewResponse)
 @limiter.limit("10/minute")
 def create_review(request: Request, review: ReviewCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Protected endpoint to create a review."""
@@ -41,7 +48,10 @@ def create_review(request: Request, review: ReviewCreate, current_user: User = D
     db.add(new_review)
     db.commit()
     db.refresh(new_review)
-    return new_review
+    
+    review_dict = new_review.__dict__.copy()
+    review_dict['user_email'] = current_user.email
+    return review_dict
 
 @router.put("/{review_id}", response_model=ReviewResponse)
 @limiter.limit("10/minute")
@@ -60,7 +70,10 @@ def update_review(request: Request, review_id: int, review_update: ReviewUpdate,
         
     db.commit()
     db.refresh(review)
-    return review
+    
+    review_dict = review.__dict__.copy()
+    review_dict['user_email'] = current_user.email
+    return review_dict
 
 @router.delete("/{review_id}")
 def delete_review(review_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
-import { Star, Clock, Calendar, ArrowLeft, PlayCircle, MessageSquare, Send } from 'lucide-react';
-import { getMovieDetails, getMovieCredits, getReviews, createReview, getTMDBImageUrl, isLoggedIn } from '@/lib/api';
+import { Star, Clock, Calendar, ArrowLeft, PlayCircle, MessageSquare, Send, Pencil, X, Check } from 'lucide-react';
+import { getMovieDetails, getMovieCredits, getReviews, createReview, getTMDBImageUrl, isLoggedIn, getMovieTrailer, getUserEmail, updateReview } from '@/lib/api';
+import { TrailerModal } from '@/components/TrailerModal';
+import ReactMarkdown from 'react-markdown';
+import { MarkdownEditor } from '@/components/MarkdownEditor';
 
 export default function TitleDetailsPage() {
   const { id } = useParams();
@@ -18,9 +21,17 @@ export default function TitleDetailsPage() {
   const [newReview, setNewReview] = useState('');
   const [rating, setRating] = useState(5);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [trailerKey, setTrailerKey] = useState<string | null>(null);
+  const [showTrailer, setShowTrailer] = useState(false);
+  const [isTrailerLoading, setIsTrailerLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editRating, setEditRating] = useState(5);
 
   useEffect(() => {
     setIsAuth(isLoggedIn());
+    setUserEmail(getUserEmail());
     
     async function fetchData() {
       try {
@@ -57,6 +68,42 @@ export default function TitleDetailsPage() {
       alert(err.message || "Failed to submit review");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleEditClick = (review: any) => {
+    setEditingReviewId(review.id);
+    setEditContent(review.content || '');
+    setEditRating(review.rating);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReviewId(null);
+  };
+
+  const submitEdit = async (reviewId: number) => {
+    if (!editContent.trim()) return;
+    try {
+      const updated = await updateReview(reviewId, editRating, editContent);
+      setReviews(reviews.map(r => r.id === reviewId ? updated : r));
+      setEditingReviewId(null);
+    } catch (err) {
+      alert("Failed to update review.");
+    }
+  };
+
+  const handleWatchTrailer = async () => {
+    try {
+      if (!trailerKey) {
+        setIsTrailerLoading(true);
+        const key = await getMovieTrailer(id as string);
+        setTrailerKey(key);
+      }
+      setShowTrailer(true);
+    } catch (err) {
+      alert("Trailer not available");
+    } finally {
+      setIsTrailerLoading(false);
     }
   };
 
@@ -137,9 +184,13 @@ export default function TitleDetailsPage() {
           <h3 className="text-xl font-bold mb-3">Overview</h3>
           <p className="text-white/80 leading-relaxed max-w-3xl mb-8">{movie.overview}</p>
 
-          <button className="flex items-center gap-2 px-6 py-3 bg-gradient-brand rounded-xl font-bold hover:scale-105 active:scale-95 transition-transform shadow-lg shadow-brand-pink/20">
+          <button 
+            onClick={handleWatchTrailer}
+            disabled={isTrailerLoading}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-brand rounded-xl font-bold hover:scale-105 active:scale-95 transition-transform shadow-lg shadow-brand-pink/20 disabled:opacity-50"
+          >
             <PlayCircle className="w-5 h-5" />
-            Watch Trailer
+            {isTrailerLoading ? "Loading..." : "Watch Trailer"}
           </button>
         </div>
       </div>
@@ -184,16 +235,22 @@ export default function TitleDetailsPage() {
                   type="number" 
                   min="1" max="10" 
                   value={rating} 
-                  onChange={(e) => setRating(Number(e.target.value))}
+                  onChange={(e) => {
+                    let val = Number(e.target.value);
+                    if (val > 10) val = 10;
+                    setRating(val);
+                  }}
+                  onBlur={() => {
+                    if (rating < 1) setRating(1);
+                  }}
                   className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-center"
                 />
                 <span className="text-sm text-white/60">/ 10</span>
               </div>
-              <textarea 
+              <MarkdownEditor 
                 value={newReview}
-                onChange={(e) => setNewReview(e.target.value)}
-                placeholder="What did you think of the movie?"
-                className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm min-h-[100px] outline-none focus:border-brand-pink/50 transition-colors mb-3 resize-none"
+                onChange={setNewReview}
+                placeholder="What did you think of the movie? (Markdown supported)"
               />
               <button 
                 type="submit" 
@@ -217,26 +274,94 @@ export default function TitleDetailsPage() {
               <p className="text-center text-white/40 text-sm py-8">No reviews yet. Be the first!</p>
             ) : (
               reviews.map((review) => (
-                <div key={review.id} className="p-4 glass border border-white/5 rounded-2xl">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-pink to-brand-purple flex items-center justify-center font-bold text-xs">
-                        U{review.user_id}
+                <div key={review.id} className="p-4 glass border border-white/5 rounded-2xl relative group">
+                  {editingReviewId === review.id ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-bold text-sm">Editing Review</h4>
+                        <div className="flex items-center gap-2">
+                          <button onClick={handleCancelEdit} className="p-1 hover:bg-white/10 rounded-full transition-colors text-white/60 hover:text-white" title="Cancel">
+                            <X className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => submitEdit(review.id)} className="p-1 hover:bg-brand-purple/20 rounded-full transition-colors text-brand-pink" title="Save">
+                            <Check className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                      <span className="text-xs text-white/40">{new Date(review.created_at).toLocaleDateString()}</span>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-sm font-medium text-white/60">Rating:</span>
+                        <input 
+                          type="number" min="1" max="10" 
+                          value={editRating} 
+                          onChange={(e) => {
+                            let val = Number(e.target.value);
+                            if (val > 10) val = 10;
+                            setEditRating(val);
+                          }}
+                          onBlur={() => {
+                            if (editRating < 1) setEditRating(1);
+                          }}
+                          className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-center text-sm"
+                        />
+                        <span className="text-sm text-white/60">/ 10</span>
+                      </div>
+                      <MarkdownEditor 
+                        value={editContent}
+                        onChange={setEditContent}
+                        placeholder="Edit your review..."
+                      />
                     </div>
-                    <div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md">
-                      <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                      <span className="text-xs font-bold">{review.rating}/10</span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-white/80 whitespace-pre-wrap">{review.content}</p>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-brand-pink to-brand-purple flex items-center justify-center font-bold text-sm uppercase">
+                            {review.user_email ? review.user_email[0] : 'U'}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-white/90">
+                              {review.user_email ? review.user_email.split('@')[0] : `User ${review.user_id}`}
+                            </span>
+                            <span className="text-xs text-white/40">{new Date(review.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {userEmail && review.user_email === userEmail && (
+                            <button 
+                              onClick={() => handleEditClick(review)}
+                              className="p-1.5 bg-white/5 hover:bg-white/10 rounded-full opacity-0 group-hover:opacity-100 transition-all text-white/60 hover:text-white"
+                              title="Edit Review"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-md">
+                            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                            <span className="text-xs font-bold">{review.rating}/10</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-sm text-white/80 prose prose-invert prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0 max-w-none">
+                        <ReactMarkdown>{review.content}</ReactMarkdown>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))
             )}
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showTrailer && (
+          <TrailerModal 
+            movie={{ id: String(movie.id), title: movie.title, poster: movie.poster_path, overview: movie.overview }} 
+            trailerKey={trailerKey} 
+            onClose={() => setShowTrailer(false)} 
+          />
+        )}
+      </AnimatePresence>
     </main>
   );
 }
